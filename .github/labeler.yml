@@ -1,0 +1,51 @@
+# 변경 파일 경로 → area/* 라벨 자동 부착 (React + Vite 프로젝트 구조 기준)
+
+area/config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'vite.config.*'
+      - 'eslint.config.*'
+      - '.prettierrc*'
+      - 'index.html'
+      - 'vercel.json'
+      - '.env.example'
+
+area/api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/api/**'
+      - 'src/lib/**'
+      - 'src/**/*socket*'
+      - 'src/**/*client*'
+
+area/ui:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/components/**'
+      - 'src/pages/**'
+      - 'src/**/*.css'
+      - 'src/assets/**'
+      - 'public/**'
+
+area/state:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/store/**'
+      - 'src/hooks/**'
+      - 'src/**/*context*'
+
+area/infra:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+      - 'Dockerfile*'
+
+area/test:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/**/*.test.*'
+      - 'tests/**'
+      - 'e2e/**'
