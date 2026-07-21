@@ -11,17 +11,17 @@ import { Screen, Button } from '../../shared/ui';
 export function JoinRoomPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
-  const setRoom = useRoomStore((s) => s.setRoom);
-  const setNickname = useRoomStore((s) => s.setNickname);
   const [nickname, setName] = useState('');
 
   const join = () => {
     const nick = nickname.trim();
     if (!nick) return;
-    // 닉네임·role만 store에 저장하고 이동. 실제 소켓 연결·room:join emit은
+    // 이전 방의 잔여 상태를 비우고 닉네임·role만 저장하고 이동. 실제 소켓 연결·room:join emit은
     // GameRoom의 useRoomConnection(role:'participant')이 connect 시 자동 처리한다.
-    setRoom(roomId, 'participant');
-    setNickname(nick);
+    const st = useRoomStore.getState();
+    st.reset();
+    st.setRoom(roomId, 'participant');
+    st.setNickname(nick);
     navigate(`/game/${roomId}`);
   };
 
@@ -47,7 +47,7 @@ export function JoinRoomPage() {
           placeholder="닉네임을 입력하세요"
           value={nickname}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && join()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && join()}
           maxLength={12}
           autoFocus
         />

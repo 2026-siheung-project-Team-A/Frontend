@@ -6,13 +6,20 @@
 export function WaitingRoom({
   roomId,
   participants,
+  onLeave,
 }: {
   roomId: string;
   participants: string[];
+  onLeave?: () => void;
 }) {
   return (
     <>
       <div className="topbar">
+        {onLeave && (
+          <button className="icon-btn" onClick={onLeave} aria-label="나가기">
+            ←
+          </button>
+        )}
         <h1>참여 방</h1>
         <span className="chip" style={{ marginLeft: 'auto' }}>
           #{roomId}

@@ -15,8 +15,6 @@ import heroImg from '../../assets/hero.png';
  */
 export function HomePage() {
   const navigate = useNavigate();
-  const setRoom = useRoomStore((s) => s.setRoom);
-  const setHostToken = useRoomStore((s) => s.setHostToken);
   const [code, setCode] = useState('');
 
   const create = useMutation({
@@ -24,8 +22,11 @@ export function HomePage() {
     mutationFn: () => roomApi.create({}),
     onSuccess: (data) => {
       if (!data) return;
-      setRoom(data.roomId, 'host');
-      setHostToken(data.hostToken);
+      // 이전 방의 잔여 상태(items·result·status 등)를 비우고 새 방으로 진입한다.
+      const st = useRoomStore.getState();
+      st.reset();
+      st.setRoom(data.roomId, 'host');
+      st.setHostToken(data.hostToken);
       navigate(`/host/${data.roomId}`);
     },
   });
@@ -74,7 +75,7 @@ export function HomePage() {
             placeholder="참여 코드 입력"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && enter()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && enter()}
             inputMode="text"
             autoCapitalize="characters"
           />

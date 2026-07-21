@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { Screen, Button, TopBar } from '../../../shared/ui';
 
 /**
  * ④ 호스트 · QR 공유 & 대기 — 참가자가 QR/코드로 들어오길 기다린다.
- * QR 코드 자동생성은 Phase 3라, 지금은 자리(placeholder) + 코드·링크를 크게 노출.
+ * joinUrl 을 QR 코드(data URL)로 생성해 표시. 참가자는 QR을 찍거나 코드를 입력해 입장.
  * 참가자 입장은 participant:joined 소켓 이벤트로 실시간 갱신된다.
  */
 export function QrWaiting({
@@ -20,6 +22,18 @@ export function QrWaiting({
   onStart: () => void;
   onBack?: () => void;
 }) {
+  const [qr, setQr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!joinUrl) return;
+    let alive = true;
+    QRCode.toDataURL(joinUrl, { width: 360, margin: 1 })
+      .then((url) => alive && setQr(url))
+      .catch(() => alive && setQr(null));
+    return () => {
+      alive = false;
+    };
+  }, [joinUrl]);
+
   return (
     <Screen
       footer={
@@ -36,9 +50,19 @@ export function QrWaiting({
 
       <div
         className="placeholder-box"
-        style={{ width: 180, height: 180, margin: '20px auto 12px' }}
+        style={{
+          width: 180,
+          height: 180,
+          margin: '20px auto 12px',
+          overflow: 'hidden',
+          background: qr ? '#fff' : undefined,
+        }}
       >
-        QR
+        {qr ? (
+          <img src={qr} alt="참여 QR" width={180} height={180} style={{ display: 'block' }} />
+        ) : (
+          'QR'
+        )}
       </div>
       <p className="center muted">QR을 찍어 참여하세요</p>
       {joinUrl && (

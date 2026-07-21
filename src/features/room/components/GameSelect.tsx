@@ -1,14 +1,14 @@
 import type { GameType } from '../../../shared/types/api';
 import { Screen, TopBar } from '../../../shared/ui';
 
-/** ② 게임 방식 선택 — 6종. Phase 1은 룰렛·투표만 활성, 나머지는 준비중. */
+/** ② 게임 방식 선택 — 6종 전부 활성. */
 const GAMES: { type: GameType; label: string; emoji: string; ready: boolean }[] = [
   { type: 'roulette', label: '룰렛', emoji: '🎯', ready: true },
   { type: 'vote', label: '투표하기', emoji: '🗳️', ready: true },
-  { type: 'draw', label: '제비뽑기', emoji: '🎋', ready: false },
-  { type: 'slot', label: '슬롯머신', emoji: '🎰', ready: false },
-  { type: 'balloon', label: '풍선 터뜨리기', emoji: '🎈', ready: false },
-  { type: 'ladder', label: '사다리타기', emoji: '🪜', ready: false },
+  { type: 'draw', label: '제비뽑기', emoji: '🎋', ready: true },
+  { type: 'slot', label: '슬롯머신', emoji: '🎰', ready: true },
+  { type: 'balloon', label: '풍선 터뜨리기', emoji: '🎈', ready: true },
+  { type: 'ladder', label: '사다리타기', emoji: '🪜', ready: true },
 ];
 
 /**
