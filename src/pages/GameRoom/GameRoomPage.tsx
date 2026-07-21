@@ -6,17 +6,20 @@ import { gameSocket } from '../../features/game/socket/gameSocket';
 import { WaitingRoom } from '../../features/game/components/WaitingRoom';
 import { Roulette } from '../../features/game/components/Roulette';
 import { VotePlay } from '../../features/game/components/VotePlay';
+import { GameStage } from '../../features/game/components/GameStage';
 import { DrawResult } from '../../features/game/components/results/DrawResult';
 import { VoteResult } from '../../features/game/components/results/VoteResult';
-import { Screen, Loading, ErrorView, GoHomeButton, Button } from '../../shared/ui';
+import { LadderResult } from '../../features/game/components/results/LadderResult';
+import { ResultModal } from '../../features/game/components/results/ResultModal';
+import { Screen, ErrorView, GoHomeButton, Button } from '../../shared/ui';
 
 /**
  * 게임 진행·결과 (참가자 화면) — gameType + status로 분기.
  *  방종료(closed) / 에러(roomError)  : 상태 화면 우선
- *  finished : ⑬ 뽑기결과 / ⑮ 투표결과 (result.type)
- *  vote(진행중): ⑫ 투표 (status=waiting 인 채로 vote:cast, 실시간 집계)
- *  playing  : ⑦ 룰렛 관전
+ *  vote(진행중·종료 후에도): ⑫ 투표 화면 (status=waiting 인 채로 vote:cast, 실시간 집계)
+ *  playing/finished  : ⑦ 룰렛·즉시게임 관전 (결과가 나와도 화면은 그대로 남는다)
  *  waiting  : ⑥ 대기
+ *  status='finished' 이면 위 화면 위에 ResultModal이 뜬다(결과 페이지로 전환하지 않음).
  *
  * 전환은 서버 이벤트로 store에 반영되어 자동으로 일어난다.
  * 참가자가 emit 하는 것은 vote:cast(투표) 뿐이다.
@@ -83,24 +86,10 @@ export function GameRoomPage() {
     );
   }
 
-  // ⑬/⑮ 결과 (호스트와 동시)
-  if (status === 'finished') {
-    return (
-      <Screen>
-        {result && result.type === 'vote' ? (
-          <VoteResult result={result} isHost={false} onHome={goHome} />
-        ) : result ? (
-          <DrawResult result={result} isHost={false} onHome={goHome} />
-        ) : (
-          <Loading message="결과를 불러오는 중…" />
-        )}
-      </Screen>
-    );
-  }
-
-  // ⑫ 투표 진행 — vote 방은 status=waiting 인 채로 참가자가 투표한다
+  // 게임 화면 — 결과가 나와도 화면은 그대로 두고 아래에서 모달만 얹는다.
+  let content;
   if (gameType === 'vote' && items.length > 0) {
-    return (
+    content = (
       <VotePlay
         roomId={roomId}
         items={items}
@@ -108,32 +97,63 @@ export function GameRoomPage() {
         isHost={false}
         myVote={myVote}
         onVote={castVote}
+        onLeave={goHome}
       />
     );
-  }
-
-  // ⑦ 룰렛 관전
-  if (status === 'playing') {
-    return (
-      <Screen>
-        <div className="topbar">
-          <h1>룰렛</h1>
-          <span className="chip" style={{ marginLeft: 'auto' }}>#{roomId}</span>
-        </div>
-        <Roulette
+  } else if (status === 'playing' || status === 'finished') {
+    if (gameType === 'roulette' || !gameType) {
+      content = (
+        <Screen>
+          <div className="topbar">
+            <h1>룰렛</h1>
+            <span className="chip" style={{ marginLeft: 'auto' }}>#{roomId}</span>
+          </div>
+          <Roulette
+            items={items}
+            isHost={false}
+            winner={rouletteWinner}
+            onFinish={() => setStatus('finished')}
+          />
+        </Screen>
+      );
+    } else if (gameType !== 'vote') {
+      content = (
+        <GameStage
+          roomId={roomId}
+          gameType={gameType}
           items={items}
           isHost={false}
-          winner={rouletteWinner}
+          result={result}
           onFinish={() => setStatus('finished')}
+          onLeave={goHome}
         />
+      );
+    }
+  }
+
+  if (!content) {
+    // ⑥ 대기
+    content = (
+      <Screen>
+        <WaitingRoom roomId={roomId} participants={participants} onLeave={goHome} />
       </Screen>
     );
   }
 
-  // ⑥ 대기
   return (
-    <Screen>
-      <WaitingRoom roomId={roomId} participants={participants} />
-    </Screen>
+    <>
+      {content}
+      {status === 'finished' && result && (
+        <ResultModal isHost={false} onHome={goHome}>
+          {result.type === 'vote' ? (
+            <VoteResult result={result} />
+          ) : result.type === 'ladder' ? (
+            <LadderResult result={result} />
+          ) : (
+            <DrawResult result={result} />
+          )}
+        </ResultModal>
+      )}
+    </>
   );
 }

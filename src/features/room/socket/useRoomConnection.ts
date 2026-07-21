@@ -101,9 +101,9 @@ export function useRoomConnection(
     socket.on('game:result', (p: { result: GameResult }) => {
       const st = useRoomStore.getState();
       st.setResult(p.result);
-      // 룰렛만 스핀 애니가 winner로 착지한 뒤 컴포넌트(onFinish)가 'finished'로 전환한다
-      // (회전을 건너뛰지 않게). 그 외(투표 등 즉시 결과)는 여기서 바로 전환.
-      if (p.result.type !== 'roulette') st.setStatus('finished');
+      // 룰렛·슬롯·제비·풍선·사다리는 각 컴포넌트가 애니메이션을 재생한 뒤 onFinish로 전환한다
+      // (애니를 건너뛰지 않게). 투표는 애니가 없어 여기서 바로 전환.
+      if (p.result.type === 'vote') st.setStatus('finished');
     });
     socket.on('vote:updated', (p: { tally: VoteTallyEntry[] }) => {
       useRoomStore.getState().setTally(p.tally);
