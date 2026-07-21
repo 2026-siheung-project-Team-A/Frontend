@@ -14,10 +14,12 @@ export function DrawResult({
   result,
   isHost,
   onReplay,
+  onHome,
 }: {
   result: GameResult;
   isHost: boolean;
   onReplay?: () => void;
+  onHome?: () => void;
 }) {
   const [toast, setToast] = useState<string | null>(null);
 
@@ -66,17 +68,26 @@ export function DrawResult({
       </p>
       <div className="spacer" />
 
-      <div className="grid-2">
-        {isHost ? (
-          <Button variant="secondary" onClick={onReplay}>
-            다시 하기
-          </Button>
-        ) : (
-          <span />
-        )}
-        <Button variant="secondary" onClick={save}>
-          결과 저장
-        </Button>
+      <div className="stack-sm" style={{ width: '100%' }}>
+        <div className="grid-2">
+          {isHost ? (
+            <Button variant="secondary" onClick={onReplay}>
+              다시 하기
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={save}>
+              결과 저장
+            </Button>
+          )}
+          {isHost ? (
+            <Button variant="secondary" onClick={save}>
+              결과 저장
+            </Button>
+          ) : (
+            <Button onClick={onHome}>홈으로</Button>
+          )}
+        </div>
+        {isHost && <Button onClick={onHome}>홈으로</Button>}
       </div>
     </>
   );

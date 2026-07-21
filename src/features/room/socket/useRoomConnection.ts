@@ -8,6 +8,7 @@ import type {
   Item,
   ParticipantChangePayload,
   RoomStatePayload,
+  VoteTallyEntry,
 } from '../../../shared/types/api';
 
 /** room:join / host 액션 ack 형태 (백엔드 gateway 공통) */
@@ -100,12 +101,21 @@ export function useRoomConnection(
     socket.on('game:result', (p: { result: GameResult }) => {
       const st = useRoomStore.getState();
       st.setResult(p.result);
-      st.setStatus('finished');
+      // 룰렛만 스핀 애니가 winner로 착지한 뒤 컴포넌트(onFinish)가 'finished'로 전환한다
+      // (회전을 건너뛰지 않게). 그 외(투표 등 즉시 결과)는 여기서 바로 전환.
+      if (p.result.type !== 'roulette') st.setStatus('finished');
+    });
+    socket.on('vote:updated', (p: { tally: VoteTallyEntry[] }) => {
+      useRoomStore.getState().setTally(p.tally);
     });
     socket.on('game:reset', () => {
       const st = useRoomStore.getState();
       st.setResult(null);
+      st.setTally([]);
       st.setStatus('waiting');
+    });
+    socket.on('online:count', (p: { onlineCount: number }) => {
+      useRoomStore.getState().setOnlineCount(p.onlineCount);
     });
 
     // ── 종료·에러 ───────────────────────────────────────────────────

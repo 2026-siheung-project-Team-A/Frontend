@@ -1,32 +1,56 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { useRoomConnection } from '../../features/room/socket/useRoomConnection';
+import { gameSocket } from '../../features/game/socket/gameSocket';
 import { WaitingRoom } from '../../features/game/components/WaitingRoom';
 import { Roulette } from '../../features/game/components/Roulette';
+import { VotePlay } from '../../features/game/components/VotePlay';
 import { DrawResult } from '../../features/game/components/results/DrawResult';
+import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { Screen, Loading, ErrorView, GoHomeButton, Button } from '../../shared/ui';
 
 /**
- * 게임 진행·결과 (참가자 화면) — status로 분기.
+ * 게임 진행·결과 (참가자 화면) — gameType + status로 분기.
  *  방종료(closed) / 에러(roomError)  : 상태 화면 우선
+ *  finished : ⑬ 뽑기결과 / ⑮ 투표결과 (result.type)
+ *  vote(진행중): ⑫ 투표 (status=waiting 인 채로 vote:cast, 실시간 집계)
+ *  playing  : ⑦ 룰렛 관전
  *  waiting  : ⑥ 대기
- *  playing  : ⑦ 룰렛 관전 (조작 불가)
- *  finished : ⑬ 결과 (호스트와 동시 표시)
  *
- * 모든 전환은 서버 room:state / game:result 수신으로 store에 반영되어 자동으로 일어난다.
- * (여기서 emit하는 것은 없음 — 참가자는 수신 중심)
+ * 전환은 서버 이벤트로 store에 반영되어 자동으로 일어난다.
+ * 참가자가 emit 하는 것은 vote:cast(투표) 뿐이다.
  */
 export function GameRoomPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
-  // 연결 소유 + 수신 배선. connect되면 room:join(닉네임)을 자동 emit한다.
-  useRoomConnection(roomId, 'participant');
+  const socketRef = useRoomConnection(roomId, 'participant');
+
   const status = useRoomStore((s) => s.status);
+  const setStatus = useRoomStore((s) => s.setStatus);
+  const gameType = useRoomStore((s) => s.gameType);
   const participants = useRoomStore((s) => s.participants);
   const items = useRoomStore((s) => s.items);
   const result = useRoomStore((s) => s.result);
+  const tally = useRoomStore((s) => s.tally);
   const roomError = useRoomStore((s) => s.roomError);
   const closed = useRoomStore((s) => s.closed);
+
+  const [myVote, setMyVote] = useState<string | null>(null);
+
+  const rouletteWinner =
+    result && result.type === 'roulette' ? result.winner : null;
+
+  const castVote = (itemId: string) => {
+    const s = socketRef.current;
+    if (s) gameSocket.castVote(s, itemId);
+    setMyVote(itemId);
+  };
+
+  const goHome = () => {
+    useRoomStore.getState().reset();
+    navigate('/');
+  };
 
   // 호스트가 방을 닫음 → 종료 화면
   if (closed) {
@@ -59,23 +83,14 @@ export function GameRoomPage() {
     );
   }
 
-  if (status === 'playing') {
-    return (
-      <Screen>
-        <div className="topbar">
-          <h1>룰렛</h1>
-          <span className="chip" style={{ marginLeft: 'auto' }}>#{roomId}</span>
-        </div>
-        <Roulette items={items} isHost={false} />
-      </Screen>
-    );
-  }
-
+  // ⑬/⑮ 결과 (호스트와 동시)
   if (status === 'finished') {
     return (
       <Screen>
-        {result ? (
-          <DrawResult result={result} isHost={false} />
+        {result && result.type === 'vote' ? (
+          <VoteResult result={result} isHost={false} onHome={goHome} />
+        ) : result ? (
+          <DrawResult result={result} isHost={false} onHome={goHome} />
         ) : (
           <Loading message="결과를 불러오는 중…" />
         )}
@@ -83,7 +98,39 @@ export function GameRoomPage() {
     );
   }
 
-  // waiting
+  // ⑫ 투표 진행 — vote 방은 status=waiting 인 채로 참가자가 투표한다
+  if (gameType === 'vote' && items.length > 0) {
+    return (
+      <VotePlay
+        roomId={roomId}
+        items={items}
+        tally={tally}
+        isHost={false}
+        myVote={myVote}
+        onVote={castVote}
+      />
+    );
+  }
+
+  // ⑦ 룰렛 관전
+  if (status === 'playing') {
+    return (
+      <Screen>
+        <div className="topbar">
+          <h1>룰렛</h1>
+          <span className="chip" style={{ marginLeft: 'auto' }}>#{roomId}</span>
+        </div>
+        <Roulette
+          items={items}
+          isHost={false}
+          winner={rouletteWinner}
+          onFinish={() => setStatus('finished')}
+        />
+      </Screen>
+    );
+  }
+
+  // ⑥ 대기
   return (
     <Screen>
       <WaitingRoom roomId={roomId} participants={participants} />

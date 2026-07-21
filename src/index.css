@@ -469,3 +469,136 @@ input {
   margin: var(--sp-3) 0;
   letter-spacing: -1px;
 }
+
+/* -------------------------------------------------------------------------
+   게임 선택 그리드 (②)
+   ------------------------------------------------------------------------- */
+.game-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.game-card {
+  position: relative;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  color: var(--ink);
+  transition: border-color 0.15s ease, transform 0.05s ease;
+}
+.game-card:not(:disabled):active {
+  transform: scale(0.98);
+}
+.game-card:not(:disabled):hover {
+  border-color: var(--accent);
+}
+.game-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.game-emoji {
+  font-size: 34px;
+}
+.game-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+.game-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--field);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+}
+
+/* -------------------------------------------------------------------------
+   투표 (⑫ 플레이 · ⑮ 결과)
+   ------------------------------------------------------------------------- */
+.vote-row,
+.vote-result-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'radio label count' 'bar bar bar';
+  align-items: center;
+  gap: 6px var(--sp-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.vote-row:disabled {
+  cursor: default;
+}
+.vote-row.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.vote-radio {
+  grid-area: radio;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+}
+.vote-radio.on {
+  border-color: var(--accent);
+  background:
+    radial-gradient(circle at center, var(--accent) 0 5px, transparent 6px);
+}
+.vote-label {
+  grid-area: label;
+  font-size: 15px;
+  font-weight: 500;
+}
+.vote-count {
+  grid-area: count;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.vote-bar {
+  grid-area: bar;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--field);
+  overflow: hidden;
+}
+.vote-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.vote-result-row {
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'rank label count' 'bar bar bar';
+  cursor: default;
+}
+.vote-result-row.winner {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.vote-rank {
+  grid-area: rank;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}

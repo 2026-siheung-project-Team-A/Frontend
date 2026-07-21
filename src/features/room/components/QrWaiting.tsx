@@ -9,12 +9,14 @@ export function QrWaiting({
   roomId,
   joinUrl,
   participants,
+  onlineCount = 0,
   onStart,
   onBack,
 }: {
   roomId: string;
   joinUrl?: string;
   participants: string[]; // 닉네임 목록
+  onlineCount?: number; // 접속 소켓 수(입장 전 포함)
   onStart: () => void;
   onBack?: () => void;
 }) {
@@ -47,6 +49,9 @@ export function QrWaiting({
 
       <p className="section-label" style={{ marginTop: 28 }}>
         참가자 {participants.length}명 (실시간)
+        {onlineCount > 0 && (
+          <span className="muted" style={{ fontWeight: 400 }}> · 접속 {onlineCount}</span>
+        )}
       </p>
       <div className="grid-2" style={{ marginTop: 12 }}>
         {participants.map((nick) => (

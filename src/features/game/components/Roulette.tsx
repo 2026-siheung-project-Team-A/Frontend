@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../../shared/types/api';
 import { Button } from '../../../shared/ui';
 
@@ -16,23 +16,32 @@ const SEG_COLORS = [
 
 /**
  * ⑦ 룰렛 — conic-gradient 원판 + 회전 애니메이션.
- * 호스트: "돌리기" 버튼으로 회전 시작(로컬 데모 계산).
- *   실제 흐름에선 game:start emit → 서버가 winner 결정 → game:result 수신 후
- *   그 index로 회전을 맞춘다. onSpin/onResult 훅으로 소켓 배선을 끼운다.
- * 참가자: 버튼 없이 원판만(회전은 추후 소켓으로 동기화).
+ *
+ * 회전은 "확정된 당첨(winner)"이 도착하면 그 칸으로 착지한다:
+ *   - 백엔드 present: 호스트가 '돌리기'→onSpin(game:start emit)→서버 game:result→store.result
+ *     →부모가 winner prop 전달→그 칸으로 회전.
+ *   - offline: 부모가 로컬 추첨한 winner를 넘겨줌(같은 경로).
+ * 참가자는 버튼 없이, winner가 도착하면 자동으로 같은 칸으로 회전(모두 동일 결과·동일 착지).
+ * 회전이 끝나면 onFinish로 결과 화면 전환을 부모에 위임한다.
+ *
+ * winner.id 는 wheel의 items[].id 와 같은 출처여야 한다(둘 다 서버 또는 둘 다 로컬).
  */
 export function Roulette({
   items,
   isHost,
-  onResult,
+  winner,
+  onSpin,
+  onFinish,
 }: {
   items: Item[];
   isHost: boolean;
-  onResult?: (winner: Item) => void;
+  winner?: Item | null;
+  onSpin?: () => void;
+  onFinish?: () => void;
 }) {
   const [rotation, setRotation] = useState(0);
-  const [spinning, setSpinning] = useState(false);
-  const winnerRef = useRef<Item | null>(null);
+  const [busy, setBusy] = useState(false);
+  const spunFor = useRef<string | null>(null);
   const n = Math.max(items.length, 1);
   const seg = 360 / n;
 
@@ -46,20 +55,27 @@ export function Roulette({
     return items.length ? `conic-gradient(${stops})` : 'var(--placeholder)';
   }, [items, seg]);
 
-  const spin = () => {
-    if (spinning || items.length < 2) return;
-    const winnerIndex = Math.floor(Math.random() * items.length);
-    winnerRef.current = items[winnerIndex];
-    // 포인터(12시)가 당첨 칸 중앙을 가리키도록 회전각 계산 + 여러 바퀴
-    const target = 360 * 5 - (winnerIndex * seg + seg / 2);
-    setSpinning(true);
+  // 확정 당첨이 도착하면 그 칸 중앙으로 회전(서버/offline 공통). 같은 winner엔 한 번만.
+  useEffect(() => {
+    if (!winner || spunFor.current === winner.id) return;
+    const idx = items.findIndex((it) => it.id === winner.id);
+    if (idx < 0) return;
+    spunFor.current = winner.id;
+    setBusy(true);
+    const target = 360 * 5 - (idx * seg + seg / 2); // 포인터(12시)가 당첨 칸 중앙
     setRotation((r) => r - (r % 360) + target);
+  }, [winner, items, seg]);
+
+  const press = () => {
+    if (busy || items.length < 2) return;
+    setBusy(true); // 서버 응답/offline 추첨 대기 동안 버튼 잠금
+    onSpin?.();
   };
 
   const handleEnd = () => {
-    if (!spinning) return;
-    setSpinning(false);
-    if (winnerRef.current) onResult?.(winnerRef.current);
+    if (!busy) return;
+    setBusy(false);
+    onFinish?.();
   };
 
   return (
@@ -90,14 +106,15 @@ export function Roulette({
         ))}
       </div>
 
-      {isHost && (
+      {isHost ? (
         <div style={{ width: '100%', marginTop: 8 }}>
-          <Button onClick={spin} disabled={spinning || items.length < 2}>
-            {spinning ? '돌리는 중…' : '돌리기'}
+          <Button onClick={press} disabled={busy || items.length < 2}>
+            {busy ? '돌리는 중…' : '돌리기'}
           </Button>
         </div>
+      ) : (
+        <p className="muted">{busy ? '돌리는 중…' : '호스트가 돌리면 결과가 떠요'}</p>
       )}
-      {!isHost && <p className="muted">호스트가 돌리면 결과가 떠요</p>}
     </div>
   );
 }

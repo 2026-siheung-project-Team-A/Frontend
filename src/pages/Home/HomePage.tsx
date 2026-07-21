@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
+import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { Screen, Button } from '../../shared/ui';
 import heroImg from '../../assets/hero.png';
@@ -19,7 +20,8 @@ export function HomePage() {
   const [code, setCode] = useState('');
 
   const create = useMutation({
-    mutationFn: () => roomApi.create({ gameType: 'roulette' }),
+    // 게임 종류는 방 안에서 호스트가 고른다(② GameSelect → game:select).
+    mutationFn: () => roomApi.create({}),
     onSuccess: (data) => {
       if (!data) return;
       setRoom(data.roomId, 'host');
@@ -58,7 +60,9 @@ export function HomePage() {
 
         {create.isError && (
           <p className="center" style={{ color: 'var(--danger)', fontSize: 14 }}>
-            방을 만들지 못했어요. 잠시 후 다시 시도해 주세요.
+            {getApiErrorCode(create.error) === 'VALIDATION_ERROR'
+              ? '입력을 확인해 주세요.'
+              : '방을 만들지 못했어요. 잠시 후 다시 시도해 주세요.'}
           </p>
         )}
 
