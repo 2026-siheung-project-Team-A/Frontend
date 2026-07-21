@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Item, VoteTallyEntry } from '../../../shared/types/api';
 import { Screen, Button, TopBar } from '../../../shared/ui';
+import { ItemEditor } from '../../room/components/ItemEditor';
 
 /**
  * ⑫ 투표하기 — 참가자가 하나 골라 투표(vote:cast), 실시간 집계 막대.
@@ -16,6 +17,9 @@ export function VotePlay({
   myVote,
   onVote,
   onClose,
+  onLeave,
+  onAddItem,
+  onRemoveItem,
 }: {
   roomId: string;
   items: Item[];
@@ -24,6 +28,10 @@ export function VotePlay({
   myVote?: string | null;
   onVote?: (itemId: string) => void;
   onClose?: () => void;
+  onLeave?: () => void;
+  /** 호스트 전용 — 투표는 진행 중에도 항목을 계속 추가/삭제할 수 있다(명시적 시작 단계가 없어서). */
+  onAddItem?: (label: string) => void;
+  onRemoveItem?: (id: string) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(myVote ?? null);
 
@@ -44,10 +52,14 @@ export function VotePlay({
         )
       }
     >
-      <TopBar title="투표하기" trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="투표하기" onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
       <p className="subtitle" style={{ marginTop: -8 }}>
         {isHost ? '실시간 집계 · 준비되면 마감하세요' : '하나 골라 투표하세요 (실시간 집계)'}
       </p>
+
+      {isHost && onAddItem && onRemoveItem && (
+        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} />
+      )}
 
       <div className="stack-sm" style={{ marginTop: 20 }}>
         {items.map((it) => {
