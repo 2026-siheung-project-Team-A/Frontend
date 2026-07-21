@@ -215,8 +215,19 @@ function PlayBoard({
   // 사다리에는 '가장 최근에 누른' 시작칸 하나만 색으로 남긴다 — 새로 누르면 이전 경로는 되돌아간다.
   // (한 번 누른 칸은 계속 비활성으로 유지해 다시 못 누르게 한다.)
   const active = revealed.length ? revealed[revealed.length - 1] : null;
-  // 활성 경로가 도착한 하단칸만 하이라이트(한 색만 남게).
-  const landed = new Set(active !== null ? [ladder.mapping[active]] : []);
+  // 하단칸(노란색) 하이라이트는 '지금 활성 경로가 바닥에 도착했을 때'에만 켠다.
+  //  - 미리 노래지는 것 방지: 경로 애니메이션이 끝나야(onArrive) arrived 가 채워진다.
+  //  - 다른 목록의 사다리를 시작하면 active 가 바뀌어 arrived !== active 가 되므로, 켜져 있던
+  //    노란색이 그 즉시 회색(기본)으로 꺼진다 — 위 시작칸 색이 꺼지는 것과 같은 타이밍.
+  const [arrived, setArrived] = useState<number | null>(null);
+  const landed = new Set(
+    active !== null && arrived === active ? [ladder.mapping[active]] : [],
+  );
+  // 이미 사용된(=지금 활성이 아닌, 이전에 공개된) 시작칸들의 도착칸 — 위 목록의 '사용됨'처럼 회색 처리.
+  // mapping 은 순열이라 각 도착칸은 시작칸 하나에만 대응하므로 겹치지 않는다.
+  const usedBottoms = new Set(
+    revealed.filter((s) => s !== active).map((s) => ladder.mapping[s]),
+  );
 
   return (
     <Screen
@@ -252,11 +263,20 @@ function PlayBoard({
             ))}
           </div>
 
-          <LadderCanvas ladder={ladder} active={active} />
+          <LadderCanvas
+            ladder={ladder}
+            active={active}
+            onArrive={() => setArrived(active)}
+          />
 
           <div className="lg-cells lg-bottoms">
             {cols.map((c) => (
-              <div key={c} className={`lg-bottom${landed.has(c) ? ' is-on' : ''}`}>
+              <div
+                key={c}
+                className={`lg-bottom${
+                  landed.has(c) ? ' is-on' : usedBottoms.has(c) ? ' is-used' : ''
+                }`}
+              >
                 {bottomLabels[c] || '　'}
               </div>
             ))}
@@ -267,9 +287,30 @@ function PlayBoard({
   );
 }
 
-/** 세로줄·가로줄(정적) + 공개된 시작칸의 내려오는 경로(그려지는 애니메이션). */
-function LadderCanvas({ ladder, revealed }: { ladder: LadderStructure; revealed: number[] }) {
+/** 내려오는 속도를 일정하게 — 단위 길이당 고정 시간(ms). 값이 클수록 느리게 내려온다. */
+const MS_PER_UNIT = 5;
+
+/** 경로의 실제 길이(뷰박스 단위) — 세그먼트 거리의 합. 길수록 애니메이션도 오래 걸린다(속도 일정). */
+function pathPixelLength(pts: Array<{ x: number; y: number }>): number {
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  }
+  return len;
+}
+
+/** 세로줄·가로줄(정적) + 활성 시작칸의 내려오는 경로(그려지는 애니메이션) '하나'만. */
+function LadderCanvas({
+  ladder,
+  active,
+  onArrive,
+}: {
+  ladder: LadderStructure;
+  active: number | null;
+  onArrive: () => void; // 경로가 바닥에 도착(애니메이션 끝)했을 때 호출 — 하단 하이라이트를 그때 켠다.
+}) {
   const w = ladder.columns * COL;
+  const pts = active !== null ? tracePath(ladder, active) : null;
   return (
     <svg
       className="lg-canvas"
@@ -293,21 +334,47 @@ function LadderCanvas({ ladder, revealed }: { ladder: LadderStructure; revealed:
           y2={rungY(ladder, g.row)}
         />
       ))}
-      {/* 공개된 시작칸 경로 — 마운트될 때 그려지는 애니메이션이 재생된다 */}
-      {revealed.map((s) => (
-        <Trace key={`t${s}`} d={toPathD(tracePath(ladder, s))} color={COLORS[s % COLORS.length]} />
-      ))}
+      {/* 활성 시작칸 경로 하나만 — active 가 바뀌면 새로 마운트돼 그려지는 애니메이션이 재생되고,
+          이전 경로는 언마운트돼 사라진다(원래대로 돌아감 → 사다리엔 한 색만 남는다). */}
+      {pts && active !== null && (
+        <Trace
+          key={`t${active}`}
+          d={toPathD(pts)}
+          color={COLORS[active % COLORS.length]}
+          durationMs={Math.round(pathPixelLength(pts) * MS_PER_UNIT)}
+          onArrive={onArrive}
+        />
+      )}
     </svg>
   );
 }
 
-/** 한 시작칸의 내려오는 경로. 마운트 시 draw 애니메이션(1회). */
-function Trace({ d, color }: { d: string; color: string }) {
+/** 한 시작칸의 내려오는 경로. 마운트 시 draw 애니메이션(1회). 길이에 비례한 시간으로 속도를 일정하게. */
+function Trace({
+  d,
+  color,
+  durationMs,
+  onArrive,
+}: {
+  d: string;
+  color: string;
+  durationMs: number;
+  onArrive: () => void; // 그려지는 애니메이션이 끝나(=바닥 도착) 하단칸을 노랗게 켤 때 호출.
+}) {
   const ref = useRef<SVGPathElement | null>(null);
-  // pathLength=1 로 정규화해 dash 로 '그려지는' 효과. React가 revealed 추가 때 새로 마운트하므로 1회 재생.
+  // pathLength=1 로 정규화해 dash 로 '그려지는' 효과. React가 active 변경 때 새로 마운트하므로 1회 재생.
   useEffect(() => {
     const el = ref.current;
     if (el) el.getBoundingClientRect(); // reflow 강제 → 애니메이션 확실히 시작
   }, []);
-  return <path ref={ref} className="lg-trace" d={d} pathLength={1} style={{ stroke: color }} />;
+  return (
+    <path
+      ref={ref}
+      className="lg-trace"
+      d={d}
+      pathLength={1}
+      style={{ stroke: color, animationDuration: `${durationMs}ms` }}
+      onAnimationEnd={onArrive}
+    />
+  );
 }
