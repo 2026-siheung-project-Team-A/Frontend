@@ -39,6 +39,16 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
     title: '게임이 진행 중이에요',
     desc: '지금은 할 수 없어요. 잠시 후 다시 시도해 주세요.',
   },
+  ALREADY_PICKED: {
+    emoji: '🎫',
+    title: '이미 제비를 뽑았어요',
+    desc: '한 사람당 하나만 뽑을 수 있어요.',
+  },
+  ROOM_LOCKED: {
+    emoji: '🚪',
+    title: '게임이 진행 중이에요',
+    desc: '지금은 입장할 수 없어요. 게임이 끝난 뒤 다시 입장해 주세요.',
+  },
   VALIDATION_ERROR: {
     emoji: '⚠️',
     title: '입력을 확인해 주세요',

@@ -15,31 +15,64 @@ export const gameSocket = {
     new Promise<{ ok: boolean }>((resolve) => {
       socket.emit('item:add', { label }, (ack: { ok: boolean }) => resolve(ack));
     }),
+  /** 항목 삭제 (host) — ack를 기다리는 Promise. addItem과 같은 이유로 순차 처리가 필요한 곳(룰렛 동기화)에서 await한다. */
   removeItem: (socket: Socket, itemId: string) =>
-    socket.emit('item:remove', { itemId }),
+    new Promise<{ ok: boolean }>((resolve) => {
+      socket.emit('item:remove', { itemId }, (ack: { ok: boolean }) => resolve(ack));
+    }),
   reorderItems: (socket: Socket, order: string[]) =>
     socket.emit('item:reorder', { order }),
 
   // 게임 진행 (host)
   selectGame: (socket: Socket, gameType: string) =>
     socket.emit('game:select', { gameType }),
+  /**
+   * '게임 시작 ▶' — 아직 결과도 항목 편집도 안 끝났지만, 참가자를 대기 화면에서
+   * 실제 게임 화면으로 옮겨 호스트가 목록을 채우는 과정을 실시간으로 보게 한다.
+   */
+  beginGame: (socket: Socket) => socket.emit('game:begin'),
   /** 즉시게임 실행. draw/balloon 은 options.count(뽑을 개수)를 넘길 수 있다. */
   startGame: (socket: Socket, options?: Record<string, unknown>) =>
     socket.emit('game:start', { options }),
-  resetGame: (socket: Socket) => socket.emit('game:reset'),
+  /**
+   * host '방으로 돌아가기' — 라운드를 접어(결과·투표·사다리·제비뽑기 데이터 삭제) 방을 다시
+   * 대기 상태로 되돌린다. 참가자를 강제 이동시키지 않는다 — 각자 결과창의 '방으로 돌아가기'로 로비에 온다.
+   */
+  returnToRoom: (socket: Socket) => socket.emit('room:return'),
+  /**
+   * 원판 실시간 편집 미리보기 — 저장하지 않는 relay. 호스트가 원판 칸에 타이핑하는 동안
+   * 참가자도 같은 라벨을 실시간으로 본다('돌리기'를 눌러야 addItem 으로 실제 items 확정).
+   */
+  sendRouletteDraft: (socket: Socket, labels: string[]) =>
+    socket.emit('roulette:draft', { labels }),
 
   // 투표 (참가자 vote:cast / host vote:close) — 백엔드는 payload.itemId 를 읽는다
   castVote: (socket: Socket, itemId: string) =>
     socket.emit('vote:cast', { itemId }),
   closeVote: (socket: Socket) => socket.emit('vote:close'),
 
-  // Server → Client
-  // ⚠️ 미사용. game:result 구독은 useRoomConnection이 소유한다(store에 반영).
-  //   여기서 socket.on()을 추가로 붙이면 같은 이벤트에 리스너가 중복 등록되므로,
-  //   새 서버 이벤트 구독은 헬퍼가 아니라 useRoomConnection에 추가할 것.
-  //   vote:updated는 Phase 2(투표) 때 useRoomConnection에 편입 예정.
-  onResult: (socket: Socket, cb: (result: unknown) => void) =>
-    socket.on('game:result', cb),
-  onVoteUpdated: (socket: Socket, cb: (tally: unknown) => void) =>
-    socket.on('vote:updated', cb),
+  // 사다리 (host) — 서버가 구조를 만들어 ladder:built 로 전원 broadcast.
+  //   build 는 칸마다 상단(이름)·하단(당첨항목)을 함께 보낸다(칸 수 = 두 배열 길이, 서로 같아야 함).
+  buildLadder: (socket: Socket, topLabels: string[], bottomLabels: string[]) =>
+    socket.emit('ladder:build', { topLabels, bottomLabels }),
+  revealLadder: (socket: Socket, topIndex: number) =>
+    socket.emit('ladder:reveal', { topIndex }),
+  resultLadder: (socket: Socket) => socket.emit('ladder:result'),
+
+  // 제비뽑기(인터랙티브) — host 가 인원수·꽝 개수로 섞고, host·참가자 누구나 제비를 뽑는다.
+  //   섞기 결과는 draw:shuffled, 뽑힘은 draw:picked 로 서버가 전원 broadcast(useRoomConnection 구독).
+  shuffleDraw: (socket: Socket, count: number, blanks: number) =>
+    socket.emit('draw:shuffle', { count, blanks }),
+  /**
+   * 제비 뽑기 — ack 를 기다리는 Promise. 이미 뽑힌 제비면 {ok:false, code:'GAME_RUNNING'} 로 거절된다
+   * (서버 HSETNX 원자적 잠금 — 먼저 뽑은 사람이 선점). 성공 시 값은 draw:picked broadcast 로 반영된다.
+   */
+  pickDraw: (socket: Socket, index: number) =>
+    new Promise<{ ok: boolean; code?: string }>((resolve) => {
+      socket.emit('draw:pick', { index }, (ack: { ok: boolean; code?: string }) =>
+        resolve(ack),
+      );
+    }),
+  // 서버→클라 구독은 useRoomConnection이 단독 소유한다(store에 반영). 여기에 socket.on() 헬퍼를
+  // 두면 같은 이벤트에 리스너가 중복 등록되므로, 새 서버 이벤트 구독은 useRoomConnection에 추가할 것.
 };

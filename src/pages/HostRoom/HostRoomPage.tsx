@@ -4,16 +4,18 @@ import type { GameResult, GameType } from '../../shared/types/api';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { useRoomConnection } from '../../features/room/socket/useRoomConnection';
 import { gameSocket } from '../../features/game/socket/gameSocket';
+import { roomSocket } from '../../features/room/socket/roomSocket';
 import { GameSelect } from '../../features/room/components/GameSelect';
-import { QrWaiting } from '../../features/room/components/QrWaiting';
+import { GameLobby } from '../../features/room/components/GameLobby';
 import { Roulette } from '../../features/game/components/Roulette';
 import { VotePlay } from '../../features/game/components/VotePlay';
 import { GameStage } from '../../features/game/components/GameStage';
+import { Ladder } from '../../features/game/components/Ladder';
+import { DrawPlay } from '../../features/game/components/DrawPlay';
 import { DrawResult } from '../../features/game/components/results/DrawResult';
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
-import { Screen } from '../../shared/ui';
 
 type Phase = 'select' | 'qr' | 'play';
 
@@ -41,6 +43,13 @@ export function HostRoomPage() {
   const storeResult = useRoomStore((s) => s.result);
   const tally = useRoomStore((s) => s.tally);
   const connection = useRoomStore((s) => s.connection);
+  const ladder = useRoomStore((s) => s.ladder);
+  const ladderTopLabels = useRoomStore((s) => s.ladderTopLabels);
+  const ladderBottomLabels = useRoomStore((s) => s.ladderBottomLabels);
+  const ladderRevealed = useRoomStore((s) => s.ladderRevealed);
+  const ladderResult = useRoomStore((s) => s.ladderResult);
+  const draw = useRoomStore((s) => s.draw);
+  const drawRound = useRoomStore((s) => s.drawRound);
 
   const [phase, setPhase] = useState<Phase>('select');
   const [gameType, setGameType] = useState<GameType | null>(null);
@@ -54,6 +63,23 @@ export function HostRoomPage() {
     const s = socketRef.current;
     if (s) gameSocket.selectGame(s, gt);
     setPhase('qr');
+  };
+
+  // '게임 시작 ▶' — 아직 결과도 항목 편집도 안 끝났지만, game:begin 으로 참가자를
+  // 대기 화면에서 실제 게임 화면으로 옮겨 이후 과정(목록 작성·게임 진행)을 실시간으로 보게 한다.
+  const beginPlay = () => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.beginGame(s);
+    setPhase('play');
+  };
+
+  // 방 삭제 — 로비의 뒤로가기/방 삭제하기에서 확인 모달을 거친 뒤 호출된다(여기선 바로 삭제).
+  // room:close → 서버가 전원에게 room:closed broadcast + 소켓 해제 → 참가자는 메인으로 튕긴다.
+  const deleteRoom = () => {
+    const s = socketRef.current;
+    if (connected && s) roomSocket.close(s);
+    useRoomStore.getState().reset();
+    navigate('/');
   };
 
   // 항목 추가/삭제 — 게임 화면 위 ItemEditor에서 한 번에 하나씩 커밋된다(사람이 타이핑하는
@@ -70,21 +96,34 @@ export function HostRoomPage() {
   const removeItem = (id: string) => {
     const s = socketRef.current;
     if (connected && s) {
-      gameSocket.removeItem(s, id); // 서버 → item:removed → store.items
+      void gameSocket.removeItem(s, id); // 서버 → item:removed → store.items
     } else {
       const st = useRoomStore.getState();
       st.setItems(st.items.filter((it) => it.id !== id)); // offline
     }
   };
 
-  // ⑦ 룰렛 '돌리기'
   const activeResult = storeResult ?? localResult;
   const rouletteWinner =
     activeResult && activeResult.type === 'roulette' ? activeResult.winner : null;
-  const spin = () => {
-    // 항상 서버로 game:start emit → 서버가 winner 계산 후 game:result를 전원(참가자 포함) broadcast.
+
+  // ⑦ 룰렛 '돌리기' — 원판에서 정한 라벨들로 서버 items를 교체(기존 제거 → 순차 추가)한 뒤 게임 시작.
+  // 서버가 winner를 계산해 game:result를 전원(참가자 포함) broadcast → 양쪽 원판이 같은 칸으로 착지.
+  const spinRoulette = async (labels: string[]) => {
     const s = socketRef.current;
-    if (s) gameSocket.startGame(s);
+    if (connected && s) {
+      for (const it of useRoomStore.getState().items) await gameSocket.removeItem(s, it.id);
+      for (const label of labels) await gameSocket.addItem(s, label);
+      gameSocket.startGame(s);
+    } else {
+      // offline — 로컬 항목 세팅 + 로컬 추첨
+      const local = labels.map((label) => ({ id: crypto.randomUUID(), label }));
+      useRoomStore.getState().setItems(local);
+      setLocalResult({
+        type: 'roulette',
+        winner: local[Math.floor(Math.random() * local.length)],
+      });
+    }
   };
   const finishPlay = () => setStatus('finished');
 
@@ -94,24 +133,53 @@ export function HostRoomPage() {
     if (connected && s) gameSocket.closeVote(s);
   };
 
-  // ⑧⑨⑩⑪ 즉시게임(제비·슬롯·풍선·사다리) 시작 → game:start. 백엔드가 결과 계산·전원 broadcast.
+  // ⑧⑨ 즉시게임(슬롯·풍선) 시작 → game:start. 백엔드가 결과 계산·전원 broadcast.
+  // (제비뽑기는 인터랙티브 draw:shuffle/pick 흐름이라 이 경로를 안 탄다)
   const startInstant = () => {
     const s = socketRef.current;
     if (!s) return;
-    const options =
-      gameType === 'draw' || gameType === 'balloon' ? { count: 1 } : undefined;
+    const options = gameType === 'balloon' ? { count: 1 } : undefined;
     gameSocket.startGame(s, options);
   };
 
-  // '같은 항목으로 다시하기' — 항목·게임종류는 그대로 두고 결과·집계만 비운 뒤 곧장 게임 화면으로(모달만 닫힘).
-  const replay = () => {
+  // ⑪ 사다리(네이버 스타일) — build(칸별 상·하단 라벨) / reveal(시작칸) / result(결과 보기).
+  const buildLadder = (topLabels: string[], bottomLabels: string[]) => {
     const s = socketRef.current;
-    if (connected && s) gameSocket.resetGame(s); // 서버 결과·투표 삭제 + status:waiting broadcast
+    if (s) gameSocket.buildLadder(s, topLabels, bottomLabels);
+  };
+  const revealLadder = (topIndex: number) => {
+    const s = socketRef.current;
+    if (s) gameSocket.revealLadder(s, topIndex);
+  };
+  const showLadderResult = () => {
+    const s = socketRef.current;
+    if (s) gameSocket.resultLadder(s);
+  };
+
+  // 제비뽑기 — 섞기(호스트)·뽑기(호스트도 참가). 뽑기는 ack 로 잠금 실패를 받아 DrawPlay 가 안내한다.
+  const shuffleDraw = (count: number, blanks: number) => {
+    const s = socketRef.current;
+    if (s) gameSocket.shuffleDraw(s, count, blanks);
+  };
+  const pickDraw = (index: number) => {
+    const s = socketRef.current;
+    return s ? gameSocket.pickDraw(s, index) : Promise.resolve({ ok: false });
+  };
+
+  // '방으로 돌아가기' — 라운드를 접어(서버가 결과·투표·사다리·제비 데이터 삭제, 대기 전환)
+  // 로비(qr)로 돌아간다. 참가자를 강제 이동시키지 않는다 — 각자 결과창의 '방으로 돌아가기'로 온다.
+  // 로비에서 호스트는 게임 종류를 바꾸거나(인라인) 다시 시작할 수 있다.
+  const returnToRoom = () => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.returnToRoom(s); // 서버 데이터 삭제 + status:waiting
     setLocalResult(null);
     const st = useRoomStore.getState();
     st.setResult(null);
     st.setTally([]);
+    st.resetLadder();
+    st.resetDraw();
     st.setStatus('waiting');
+    setPhase('qr');
   };
 
   const goHome = () => {
@@ -119,19 +187,29 @@ export function HostRoomPage() {
     navigate('/');
   };
 
+  // 첫 화면(아직 게임도 안 고른 상태)에서 나가기 — 방은 여기서만 실제로 삭제된다(방금 만들고 나가기).
+  const leaveBeforeStart = () => {
+    const s = socketRef.current;
+    if (connected && s) roomSocket.close(s);
+    goHome();
+  };
+
   if (phase === 'select') {
-    return <GameSelect onSelect={chooseGame} onBack={() => navigate('/')} />;
+    return <GameSelect onSelect={chooseGame} onBack={leaveBeforeStart} />;
   }
 
   if (phase === 'qr') {
     return (
-      <QrWaiting
+      <GameLobby
         roomId={roomId}
         joinUrl={`${window.location.origin}/r/${roomId}`}
         participants={participants}
         onlineCount={onlineCount}
-        onStart={() => setPhase('play')}
-        onBack={() => setPhase('select')}
+        isHost
+        gameType={gameType}
+        onSelectGame={chooseGame}
+        onStart={beginPlay}
+        onDeleteRoom={deleteRoom}
       />
     );
   }
@@ -152,24 +230,51 @@ export function HostRoomPage() {
     );
   } else if (gameType === 'roulette' || !gameType) {
     content = (
-      <Screen>
-        <div className="topbar">
-          <h1>룰렛</h1>
-          <span className="chip" style={{ marginLeft: 'auto' }}>#{roomId}</span>
-        </div>
-        <Roulette
-          items={wheelItems}
-          isHost
-          winner={rouletteWinner}
-          onSpin={spin}
-          onFinish={finishPlay}
-          onAddItem={addItem}
-          onRemoveItem={removeItem}
-        />
-      </Screen>
+      <Roulette
+        items={wheelItems}
+        isHost
+        winner={rouletteWinner}
+        onSpinLabels={spinRoulette}
+        onDraftChange={(labels) => {
+          const s = socketRef.current;
+          if (connected && s) gameSocket.sendRouletteDraft(s, labels);
+        }}
+        onFinish={finishPlay}
+        onLeave={goHome}
+      />
+    );
+  } else if (gameType === 'ladder') {
+    // ⑪ 사다리 — 편집(상·하단 라벨·칸 수) → 시작 → 시작칸 공개(내려오는 애니메이션) → 결과 보기
+    content = (
+      <Ladder
+        roomId={roomId}
+        isHost
+        ladder={ladder}
+        topLabels={ladderTopLabels}
+        bottomLabels={ladderBottomLabels}
+        revealed={ladderRevealed}
+        onBuild={buildLadder}
+        onReveal={revealLadder}
+        onResult={showLadderResult}
+        onLeave={goHome}
+      />
+    );
+  } else if (gameType === 'draw') {
+    // 제비뽑기(인터랙티브) — 인원수·꽝 설정 → 섞기 → 호스트·참가자 각자 뽑기(먼저 뽑힌 제비는 잠금)
+    content = (
+      <DrawPlay
+        roomId={roomId}
+        isHost
+        draw={draw}
+        round={drawRound}
+        onShuffle={shuffleDraw}
+        onPick={pickDraw}
+        onReturn={returnToRoom}
+        onLeave={goHome}
+      />
     );
   } else {
-    // 제비·슬롯·풍선·사다리 — 즉시게임 (버튼 → game:start → 결과 애니 → 모달)
+    // 슬롯·풍선 — 즉시게임 (버튼 → game:start → 결과 애니 → 모달)
     content = (
       <GameStage
         roomId={roomId}
@@ -189,14 +294,17 @@ export function HostRoomPage() {
     <>
       {content}
       {status === 'finished' && activeResult && (
-        <ResultModal isHost onReplay={replay} onHome={goHome}>
+        <ResultModal onReturn={returnToRoom}>
           {activeResult.type === 'vote' ? (
             <VoteResult result={activeResult} />
-          ) : activeResult.type === 'ladder' ? (
-            <LadderResult result={activeResult} />
           ) : (
             <DrawResult result={activeResult} />
           )}
+        </ResultModal>
+      )}
+      {ladderResult && (
+        <ResultModal onReturn={returnToRoom}>
+          <LadderResult result={ladderResult} />
         </ResultModal>
       )}
     </>
