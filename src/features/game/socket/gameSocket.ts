@@ -22,6 +22,10 @@ export const gameSocket = {
   closeVote: (socket: Socket) => socket.emit('vote:close'),
 
   // Server → Client
+  // ⚠️ 미사용. game:result 구독은 useRoomConnection이 소유한다(store에 반영).
+  //   여기서 socket.on()을 추가로 붙이면 같은 이벤트에 리스너가 중복 등록되므로,
+  //   새 서버 이벤트 구독은 헬퍼가 아니라 useRoomConnection에 추가할 것.
+  //   vote:updated는 Phase 2(투표) 때 useRoomConnection에 편입 예정.
   onResult: (socket: Socket, cb: (result: unknown) => void) =>
     socket.on('game:result', cb),
   onVoteUpdated: (socket: Socket, cb: (tally: unknown) => void) =>
