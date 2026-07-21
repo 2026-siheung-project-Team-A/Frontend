@@ -14,7 +14,7 @@ const META: Record<
   Exclude<GameType, 'roulette' | 'vote'>,
   { title: string; hint: string; action: string; busy: string }
 > = {
-  slot: { title: '슬롯머신', hint: '3칸이 돌아가요', action: '돌리기 (레버)', busy: '돌리는 중…' },
+  order: { title: '순서 정하기', hint: '항목을 무작위 순서로 줄 세워요', action: '순서 정하기', busy: '순서 정하는 중…' },
   draw: { title: '제비뽑기', hint: '제비를 하나 뽑아요', action: '제비 뽑기', busy: '뽑는 중…' },
   balloon: { title: '풍선 터뜨리기', hint: '풍선을 터뜨리면 항목이 나와요', action: '터뜨리기', busy: '터뜨리는 중…' },
   ladder: { title: '사다리타기', hint: '항목을 무작위로 이어요', action: '사다리 타기', busy: '내려가는 중…' },
@@ -81,10 +81,10 @@ export function GameStage({
       )}
 
       <div className={`stage-visual${active ? ' active' : ''}`}>
-        {gameType === 'slot' && (
-          <div className="slot-reels">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="slot-reel">?</div>
+        {gameType === 'order' && (
+          <div className="order-preview">
+            {items.map((it) => (
+              <span key={it.id} className="order-chip">{it.label}</span>
             ))}
           </div>
         )}

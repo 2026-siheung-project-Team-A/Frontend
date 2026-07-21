@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { GameResult, GameType } from '../../shared/types/api';
 import { useRoomStore } from '../../features/room/store/roomStore';
@@ -12,7 +12,9 @@ import { VotePlay } from '../../features/game/components/VotePlay';
 import { GameStage } from '../../features/game/components/GameStage';
 import { Ladder } from '../../features/game/components/Ladder';
 import { DrawPlay } from '../../features/game/components/DrawPlay';
+import { BalloonPlay } from '../../features/game/components/BalloonPlay';
 import { DrawResult } from '../../features/game/components/results/DrawResult';
+import { OrderResult } from '../../features/game/components/results/OrderResult';
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
@@ -50,6 +52,8 @@ export function HostRoomPage() {
   const ladderResult = useRoomStore((s) => s.ladderResult);
   const draw = useRoomStore((s) => s.draw);
   const drawRound = useRoomStore((s) => s.drawRound);
+  const balloon = useRoomStore((s) => s.balloon);
+  const balloonRound = useRoomStore((s) => s.balloonRound);
 
   const [phase, setPhase] = useState<Phase>('select');
   const [gameType, setGameType] = useState<GameType | null>(null);
@@ -133,13 +137,24 @@ export function HostRoomPage() {
     if (connected && s) gameSocket.closeVote(s);
   };
 
-  // ⑧⑨ 즉시게임(슬롯·풍선) 시작 → game:start. 백엔드가 결과 계산·전원 broadcast.
-  // (제비뽑기는 인터랙티브 draw:shuffle/pick 흐름이라 이 경로를 안 탄다)
+  // ⑧ 즉시게임(슬롯) 시작 → game:start. 백엔드가 결과 계산·전원 broadcast.
+  // (제비뽑기·풍선은 인터랙티브 흐름이라 이 경로를 안 탄다)
   const startInstant = () => {
     const s = socketRef.current;
-    if (!s) return;
-    const options = gameType === 'balloon' ? { count: 1 } : undefined;
-    gameSocket.startGame(s, options);
+    if (s) gameSocket.startGame(s);
+  };
+
+  // 풍선 러시안룰렛(턴제) — 시작(호스트)·펌프(현재 턴 참가자). host 는 턴이 없어 관전만.
+  // 시작 ack 를 반환해 참가자 부족(NEED_MORE_PLAYERS) 등 실패를 BalloonPlay 가 안내한다.
+  // useCallback 으로 identity 를 고정한다 — BalloonPlay 의 자동시작 useEffect 가 매 렌더마다
+  // 재실행돼 balloon:start 를 중복 emit 하지 않도록(socketRef 는 안정적이라 deps 비움).
+  const startBalloon = useCallback((total: number) => {
+    const s = socketRef.current;
+    return s ? gameSocket.startBalloon(s, total) : Promise.resolve({ ok: false });
+  }, [socketRef]);
+  const popBalloon = () => {
+    const s = socketRef.current;
+    return s ? gameSocket.popBalloon(s) : Promise.resolve({ ok: false });
   };
 
   // ⑪ 사다리(네이버 스타일) — build(칸별 상·하단 라벨) / reveal(시작칸) / result(결과 보기).
@@ -178,6 +193,7 @@ export function HostRoomPage() {
     st.setTally([]);
     st.resetLadder();
     st.resetDraw();
+    st.resetBalloon();
     st.setStatus('waiting');
     setPhase('qr');
   };
@@ -273,8 +289,23 @@ export function HostRoomPage() {
         onLeave={goHome}
       />
     );
+  } else if (gameType === 'balloon') {
+    // 풍선 러시안룰렛(턴제) — 호스트는 풍선 개수 설정·시작 후 관전(턴 없음)
+    content = (
+      <BalloonPlay
+        roomId={roomId}
+        isHost
+        balloon={balloon}
+        round={balloonRound}
+        playerCount={participants.length}
+        onStart={startBalloon}
+        onPop={popBalloon}
+        onReturn={returnToRoom}
+        onLeave={goHome}
+      />
+    );
   } else {
-    // 슬롯·풍선 — 즉시게임 (버튼 → game:start → 결과 애니 → 모달)
+    // 슬롯 — 즉시게임 (버튼 → game:start → 결과 애니 → 모달)
     content = (
       <GameStage
         roomId={roomId}
@@ -297,6 +328,8 @@ export function HostRoomPage() {
         <ResultModal onReturn={returnToRoom}>
           {activeResult.type === 'vote' ? (
             <VoteResult result={activeResult} />
+          ) : activeResult.type === 'order' ? (
+            <OrderResult result={activeResult} />
           ) : (
             <DrawResult result={activeResult} />
           )}

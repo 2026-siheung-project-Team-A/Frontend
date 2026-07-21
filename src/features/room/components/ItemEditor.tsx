@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import type { Item } from '../../../shared/types/api';
 
+/** 옵션(항목) 최대 개수 — 룰렛·슬롯·풍선·투표 공통 상한(서버 game.service 와 동일) */
+const MAX_ITEMS = 12;
+
 /**
  * 항목 개수·목록 편집 — 별도 페이지가 아니라 각 게임 화면 위에 그대로 얹혀서 쓰인다.
  * 항목이 하나도 없으면 입력칸 1개로 시작하고("항목이 하나인 상황"), 텍스트를 적고
@@ -25,9 +28,11 @@ export function ItemEditor({
 
   if (locked) return null;
 
+  const atMax = items.length >= MAX_ITEMS;
+
   const commit = () => {
     const label = draft.trim();
-    if (!label) return;
+    if (!label || atMax) return;
     onAdd(label);
     setDraft('');
   };
@@ -35,7 +40,9 @@ export function ItemEditor({
   return (
     <div className="item-editor">
       <p className="section-label">
-        항목 {items.length}개{items.length < 2 && ' · 최소 2개 필요'}
+        항목 {items.length}개
+        {items.length < 2 && ' · 최소 2개 필요'}
+        {atMax && ` · 최대 ${MAX_ITEMS}개`}
       </p>
       <div className="stack-sm" style={{ marginTop: 8 }}>
         {items.map((it) => (
@@ -50,30 +57,32 @@ export function ItemEditor({
             </button>
           </div>
         ))}
-        <div className="list-row">
-          <input
-            className="input"
-            style={{ border: 'none', background: 'transparent', padding: 0, flex: 1 }}
-            placeholder={`항목 ${items.length + 1} 입력`}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                commit();
-              }
-            }}
-          />
-          <button
-            className="row-remove"
-            style={{ color: 'var(--accent)', fontWeight: 700 }}
-            onClick={commit}
-            disabled={!draft.trim()}
-            aria-label="항목 추가"
-          >
-            +
-          </button>
-        </div>
+        {!atMax && (
+          <div className="list-row">
+            <input
+              className="input"
+              style={{ border: 'none', background: 'transparent', padding: 0, flex: 1 }}
+              placeholder={`항목 ${items.length + 1} 입력`}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  commit();
+                }
+              }}
+            />
+            <button
+              className="row-remove"
+              style={{ color: 'var(--accent)', fontWeight: 700 }}
+              onClick={commit}
+              disabled={!draft.trim()}
+              aria-label="항목 추가"
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

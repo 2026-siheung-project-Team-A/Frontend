@@ -15,7 +15,7 @@ import { Screen, Button, TopBar } from '../../../shared/ui';
  */
 
 const MIN = 2;
-const MAX = 10;
+const MAX = 12;
 const CANVAS_H = 300; // SVG 세로줄 높이(뷰박스 단위)
 const COL = 100; // 칸당 가로 폭(뷰박스 단위) — colX(c) = c*COL + COL/2
 
@@ -212,8 +212,11 @@ function PlayBoard({
   const cols = Array.from({ length: ladder.columns }, (_, i) => i);
   const revealedSet = new Set(revealed);
   const allRevealed = revealed.length >= ladder.columns;
-  // 공개된 시작칸이 도착한 하단칸(하이라이트용).
-  const landed = new Set(revealed.map((s) => ladder.mapping[s]));
+  // 사다리에는 '가장 최근에 누른' 시작칸 하나만 색으로 남긴다 — 새로 누르면 이전 경로는 되돌아간다.
+  // (한 번 누른 칸은 계속 비활성으로 유지해 다시 못 누르게 한다.)
+  const active = revealed.length ? revealed[revealed.length - 1] : null;
+  // 활성 경로가 도착한 하단칸만 하이라이트(한 색만 남게).
+  const landed = new Set(active !== null ? [ladder.mapping[active]] : []);
 
   return (
     <Screen
@@ -237,8 +240,10 @@ function PlayBoard({
               <button
                 key={c}
                 type="button"
-                className={`lg-top${revealedSet.has(c) ? ' is-on' : ''}`}
-                style={revealedSet.has(c) ? { borderColor: COLORS[c % COLORS.length] } : undefined}
+                className={`lg-top${
+                  revealedSet.has(c) ? (c === active ? ' is-on' : ' is-used') : ''
+                }`}
+                style={c === active ? { borderColor: COLORS[c % COLORS.length] } : undefined}
                 disabled={!isHost || revealedSet.has(c)}
                 onClick={() => onReveal(c)}
               >
@@ -247,7 +252,7 @@ function PlayBoard({
             ))}
           </div>
 
-          <LadderCanvas ladder={ladder} revealed={revealed} />
+          <LadderCanvas ladder={ladder} active={active} />
 
           <div className="lg-cells lg-bottoms">
             {cols.map((c) => (
