@@ -6,7 +6,7 @@ const GAMES: { type: GameType; label: string; emoji: string; ready: boolean }[] 
   { type: 'roulette', label: '룰렛', emoji: '🎯', ready: true },
   { type: 'vote', label: '투표하기', emoji: '🗳️', ready: true },
   { type: 'draw', label: '제비뽑기', emoji: '🎋', ready: true },
-  { type: 'slot', label: '슬롯머신', emoji: '🎰', ready: true },
+  { type: 'order', label: '순서 정하기', emoji: '🔢', ready: true },
   { type: 'balloon', label: '풍선 터뜨리기', emoji: '🎈', ready: true },
   { type: 'ladder', label: '사다리타기', emoji: '🪜', ready: true },
 ];

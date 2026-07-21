@@ -73,6 +73,32 @@ export const gameSocket = {
         resolve(ack),
       );
     }),
+
+  // 풍선 러시안룰렛(턴제) — host 가 풍선 크기를 정해 시작하고, 현재 턴 참가자가 가운데 풍선을 펌프한다.
+  //   시작은 balloon:started, 펌프는 balloon:popped 로 서버가 전원 broadcast(useRoomConnection 구독).
+  /**
+   * 풍선 게임 시작(host) — ack 를 기다리는 Promise. 참가자가 2명 미만이면
+   * {ok:false, code:'NEED_MORE_PLAYERS'} 로 거절되므로, 호출부가 이 값으로 안내를 띄운다.
+   * (예전엔 ack 없이 emit 만 해 실패해도 아무 반응이 없었다 — '작동 안 함'의 원인.)
+   */
+  startBalloon: (socket: Socket, total: number) =>
+    new Promise<{ ok: boolean; code?: string }>((resolve) => {
+      socket.emit(
+        'balloon:start',
+        { total },
+        (ack: { ok: boolean; code?: string }) => resolve(ack),
+      );
+    }),
+  /**
+   * 풍선 펌프 — ack 를 기다리는 Promise. 내 턴이 아니면 {ok:false, code:'NOT_YOUR_TURN'} 로 거절된다.
+   * 성공 시 결과(누적 펌프·다음 턴·걸림 여부)는 balloon:popped broadcast 로 반영된다.
+   */
+  popBalloon: (socket: Socket) =>
+    new Promise<{ ok: boolean; code?: string }>((resolve) => {
+      socket.emit('balloon:pop', {}, (ack: { ok: boolean; code?: string }) =>
+        resolve(ack),
+      );
+    }),
   // 서버→클라 구독은 useRoomConnection이 단독 소유한다(store에 반영). 여기에 socket.on() 헬퍼를
   // 두면 같은 이벤트에 리스너가 중복 등록되므로, 새 서버 이벤트 구독은 useRoomConnection에 추가할 것.
 };

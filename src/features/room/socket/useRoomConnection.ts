@@ -3,6 +3,8 @@ import type { Socket } from 'socket.io-client';
 import { connectRoom } from '../../../shared/lib/socket';
 import { useRoomStore } from '../store/roomStore';
 import type {
+  BalloonPoppedPayload,
+  BalloonStartedPayload,
   DrawPick,
   DrawShuffledPayload,
   ErrorCode,
@@ -109,6 +111,7 @@ export function useRoomConnection(
       st.setTally([]);
       st.resetLadder();
       st.resetDraw();
+      st.resetBalloon();
       st.setRouletteDraft([]);
       st.setStatus('playing');
     };
@@ -149,6 +152,15 @@ export function useRoomConnection(
     });
     socket.on('draw:picked', (p: DrawPick) => {
       useRoomStore.getState().applyDrawPicked(p);
+    });
+
+    // ── 풍선 러시안룰렛(턴제): 시작(started)·터짐(popped) ──
+    // host·참가자 모두 같은 이벤트를 받아 같은 풍선판·턴을 본다(폭탄 위치는 걸릴 때 드러난다).
+    socket.on('balloon:started', (p: BalloonStartedPayload) => {
+      useRoomStore.getState().applyBalloonStarted(p);
+    });
+    socket.on('balloon:popped', (p: BalloonPoppedPayload) => {
+      useRoomStore.getState().applyBalloonPopped(p);
     });
 
     socket.on('online:count', (p: { onlineCount: number }) => {

@@ -8,7 +8,7 @@ const GAMES: { type: GameType; label: string; emoji: string }[] = [
   { type: 'roulette', label: '룰렛', emoji: '🎯' },
   { type: 'vote', label: '투표하기', emoji: '🗳️' },
   { type: 'draw', label: '제비뽑기', emoji: '🎋' },
-  { type: 'slot', label: '슬롯머신', emoji: '🎰' },
+  { type: 'order', label: '순서 정하기', emoji: '🔢' },
   { type: 'balloon', label: '풍선 터뜨리기', emoji: '🎈' },
   { type: 'ladder', label: '사다리타기', emoji: '🪜' },
 ];

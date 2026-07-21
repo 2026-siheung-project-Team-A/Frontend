@@ -735,23 +735,22 @@ input {
   min-height: 240px;
 }
 
-/* 슬롯 릴 */
-.slot-reels {
+/* 순서 정하기 — 섞기 전 항목 칩 미리보기 */
+.order-preview {
   display: flex;
-  gap: var(--sp-3);
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: center;
+  max-width: 320px;
 }
-.slot-reel {
-  width: 72px;
-  height: 110px;
-  border-radius: var(--r-field);
+.order-chip {
+  padding: 10px 14px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: var(--field);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--muted);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* 제비 통 */
@@ -899,9 +898,8 @@ input {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
-.stage-visual.active .slot-reel {
-  color: var(--ink);
-  animation: reel-spin 0.28s linear infinite;
+.stage-visual.active .order-chip {
+  animation: reel-spin 0.4s ease-in-out infinite;
 }
 .stage-visual.active .draw-stick {
   animation: wiggle 0.35s ease-in-out infinite;
@@ -1561,4 +1559,215 @@ input {
 .rm-count {
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── 풍선 터뜨리기(러시안 룰렛, 턴제) — BalloonPlay.tsx 전용(.bp-*) ── */
+/* 대기 화면 — 설정 페이지 없이, 시작 전 잔잔히 떠 있는 풍선 하나 */
+.bp-wait-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 240px;
+}
+.bp-balloon-idle {
+  font-size: 96px;
+  line-height: 1;
+  opacity: 0.65;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.12));
+  animation: bp-float 2.6s ease-in-out infinite;
+}
+@keyframes bp-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-balloon-idle {
+    animation: none;
+  }
+}
+
+.bp-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.bp-headline {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin: 0;
+}
+.bp-wait {
+  color: var(--muted);
+  margin-top: 24px;
+}
+
+/* 턴 순서 태그 */
+.bp-turns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.bp-turn-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--field);
+  color: var(--muted);
+  border: 1px solid transparent;
+}
+.bp-turn-tag.is-now {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.bp-turn-tag.is-me {
+  text-decoration: underline;
+}
+
+/* 가운데 풍선 하나 — 펌프가 쌓일수록 커진다(scale 은 인라인 style 로 제어) */
+.bp-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 240px;
+  margin: 8px 0;
+}
+.bp-balloon-big {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 96px;
+  line-height: 1;
+  cursor: default;
+  /* scale 전이는 부드럽게, 펌프할 때마다 커지는 느낌 */
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center bottom;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.12));
+  will-change: transform;
+}
+/* 내 차례 — 탭 가능. 살짝 흔들려 눌러야 함을 알린다. */
+.bp-balloon-big.is-mine {
+  cursor: pointer;
+  animation: bp-wobble 1.4s ease-in-out infinite;
+}
+.bp-balloon-big.is-mine:not(:disabled):active {
+  transform: scale(0.94);
+}
+@keyframes bp-wobble {
+  0%, 100% {
+    rotate: -3deg;
+  }
+  50% {
+    rotate: 3deg;
+  }
+}
+/* 터짐 — 펑! */
+.bp-balloon-big.is-burst {
+  animation: bp-boom 0.5s ease both;
+  filter: none;
+}
+@keyframes bp-boom {
+  0% {
+    transform: scale(0.9);
+  }
+  40% {
+    transform: scale(1.7);
+  }
+  70% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1.5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-balloon-big,
+  .bp-balloon-big.is-mine {
+    animation: none;
+    transition: none;
+  }
+}
+.bp-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+.bp-status b {
+  color: var(--ink);
+}
+.bp-note {
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ── 순서 정하기 결과 (OrderResult) ─────────────────────────────────── */
+.order-result-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.order-result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-field);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  animation: order-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.order-result-row:first-child {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.order-rank {
+  flex: none;
+  min-width: 30px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.order-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes order-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-result-row {
+    animation: none;
+  }
 }

@@ -15,7 +15,7 @@ import { Screen, Button, TopBar } from '../../../shared/ui';
  */
 
 const MIN = 2;
-const MAX = 10;
+const MAX = 12;
 
 /** 제비 색(칸 index 로 고정) — face=앞면, edge=접힘 그림자 */
 const LOTS = [
@@ -66,7 +66,7 @@ export function DrawPlay({
 }: {
   roomId: string;
   isHost: boolean;
-  me?: string | null; // 내 닉네임(참가자) — 1인 1제비 판정에 쓴다. host 는 제한 없음.
+  me?: string | null; // 내 닉네임(참가자) — 1인당 뽑기 상한(perPick) 판정에 쓴다. host 는 제한 없음.
   draw: DrawState | null;
   round: number; // 섞기 라운드 nonce — 값이 바뀌면 제비 그리드가 다시 마운트되며 섞기 애니메이션 재생
   onShuffle: (count: number, blanks: number) => void;
@@ -96,12 +96,15 @@ export function DrawPlay({
   const lotCount = draw ? draw.count : count; // 설정 땐 스텝퍼 미리보기, 진행 땐 실제 제비판
   const remaining = draw ? draw.count - draw.picks.length : 0;
   const done = !!draw && remaining <= 0;
-  // 참가자는 1인 1제비 — 이미 내 닉네임으로 뽑은 제비가 있으면 더 못 뽑는다(host 는 제한 없음).
-  const iPicked =
-    !isHost && !!me && (draw?.picks ?? []).some((p) => p.by === me);
+  // 참가자 1인당 뽑기 상한 — 보통 1(1인 1제비)이지만, 제비수 > 사람수면 서버가 상한을 올려
+  // 참가자도 여러 개 뽑을 수 있다(host 는 제한 없음).
+  const perPick = draw?.perPick ?? 1;
+  const myPicks =
+    !isHost && me ? (draw?.picks ?? []).filter((p) => p.by === me).length : 0;
+  const iReachedCap = !isHost && !!me && myPicks >= perPick;
 
   const pick = async (index: number) => {
-    if (picking || picks.has(index) || iPicked) return;
+    if (picking || picks.has(index) || iReachedCap) return;
     setPicking(true);
     setNote(null);
     const ack = await onPick(index);
@@ -109,7 +112,9 @@ export function DrawPlay({
     if (ack && ack.ok === false) {
       setNote(
         ack.code === 'ALREADY_PICKED'
-          ? '한 사람당 하나만 뽑을 수 있어요'
+          ? perPick > 1
+            ? `한 사람당 최대 ${perPick}개까지 뽑을 수 있어요`
+            : '한 사람당 하나만 뽑을 수 있어요'
           : ack.code === 'GAME_RUNNING'
             ? '앗, 방금 다른 사람이 먼저 뽑았어요'
             : '뽑기에 실패했어요',
@@ -122,19 +127,21 @@ export function DrawPlay({
     ? '버튼을 눌러 제비를 섞어 주세요'
     : done
       ? '모든 제비를 뽑았어요'
-      : iPicked
-        ? '제비를 뽑았어요! 모두 뽑을 때까지 기다려 주세요'
+      : iReachedCap
+        ? '제비를 다 뽑았어요! 모두 뽑을 때까지 기다려 주세요'
         : isHost
           ? '제비를 골라 뽑아 주세요 (여러 개 가능)'
-          : '제비를 하나 골라 뽑아 주세요';
+          : perPick > 1
+            ? `제비를 골라 뽑아 주세요 (최대 ${perPick}개)`
+            : '제비를 하나 골라 뽑아 주세요';
 
   // ── 스텝퍼 바 (호스트만 조작, 스크린샷 상단) ──
   const controls = isHost && (
     <div className="jb-controls">
       <Stepper
-        label="인원수"
+        label="제비 수"
         value={count}
-        unit="명"
+        unit="개"
         onDec={() => setCount(count - 1)}
         onInc={() => setCount(count + 1)}
         decDisabled={count <= MIN}
@@ -205,7 +212,7 @@ export function DrawPlay({
                   </div>
                 );
               }
-              const canPick = !!draw && !iPicked; // 설정 단계 미리보기·이미 뽑은 참가자는 못 뽑음
+              const canPick = !!draw && !iReachedCap; // 설정 단계 미리보기·상한에 도달한 참가자는 못 뽑음
               return (
                 <button
                   key={i}

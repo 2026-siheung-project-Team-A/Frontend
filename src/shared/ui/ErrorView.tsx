@@ -44,6 +44,16 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
     title: '이미 제비를 뽑았어요',
     desc: '한 사람당 하나만 뽑을 수 있어요.',
   },
+  NEED_MORE_PLAYERS: {
+    emoji: '👥',
+    title: '참가자가 더 필요해요',
+    desc: '풍선 게임은 참가자가 2명 이상이어야 시작할 수 있어요.',
+  },
+  NOT_YOUR_TURN: {
+    emoji: '⏳',
+    title: '아직 내 차례가 아니에요',
+    desc: '내 차례가 되면 풍선을 터뜨릴 수 있어요.',
+  },
   ROOM_LOCKED: {
     emoji: '🚪',
     title: '게임이 진행 중이에요',

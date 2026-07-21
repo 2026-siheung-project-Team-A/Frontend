@@ -8,7 +8,7 @@ const SLICE_COLORS = [
   '#8ed08c', '#f3cf68', '#e79ac2', '#83d2c3',
 ];
 const MIN = 2;
-const MAX = 8;
+const MAX = 12;
 
 /**
  * 원판 돌리기 — 호스트는 이 화면 안에서 옵션 개수(±, 2~8)를 정하고

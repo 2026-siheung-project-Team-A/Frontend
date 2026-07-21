@@ -7,7 +7,7 @@
 export type GameType =
   | 'roulette' // 룰렛
   | 'draw' // 제비뽑기
-  | 'slot' // 슬롯머신
+  | 'order' // 순서 정하기
   | 'balloon' // 풍선터뜨리기
   | 'ladder' // 사다리타기
   | 'vote'; // 투표하기
@@ -25,6 +25,8 @@ export type ErrorCode =
   | 'NEED_MORE_ITEMS'
   | 'GAME_RUNNING'
   | 'ALREADY_PICKED'
+  | 'NEED_MORE_PLAYERS'
+  | 'NOT_YOUR_TURN'
   | 'ROOM_LOCKED'
   | 'VALIDATION_ERROR';
 
@@ -88,6 +90,8 @@ export interface RoomStatePayload {
   ladderRevealed: number[]; // 이미 공개된 시작칸 index 들
   // 제비뽑기가 진행 중이면 그 판(제비 수·꽝 수·뽑힌 제비들). 뽑힌 제비만 blank 공개(스포일러 방지).
   draw: DrawState | null;
+  // 풍선 게임이 진행 중이면 그 상태(총 개수·터진 풍선·턴 순서·현재 턴·걸린 사람). 폭탄 위치는 비밀.
+  balloon: BalloonState | null;
 }
 
 /** `participant:joined` / `participant:left` broadcast 페이로드 (전체 목록 포함) */
@@ -102,9 +106,9 @@ export interface ParticipantChangePayload {
 //   winner/winners/matching/tally 는 모두 Item(객체)이다 (label 문자열이 아님).
 // ---------------------------------------------------------------------------
 
-/** 룰렛·슬롯: 1개 당첨 */
+/** 룰렛: 1개 당첨 */
 export interface SingleWinnerResult {
-  type: 'roulette' | 'slot';
+  type: 'roulette';
   winner: Item;
 }
 
@@ -113,6 +117,12 @@ export interface MultiWinnerResult {
   type: 'draw' | 'balloon';
   winners: Item[];
   winnerCount: number;
+}
+
+/** 순서 정하기: 항목을 무작위 순열로 1등~N등 줄 세운 결과. order[0] = 1등 */
+export interface OrderResult {
+  type: 'order';
+  order: Item[];
 }
 
 // ---------------------------------------------------------------------------
@@ -132,8 +142,9 @@ export interface DrawPick {
 
 /** 제비판 상태 — 재접속/늦은 입장 복원(room:state.draw). 뽑힌 제비만 blank 공개(스포일러 방지). */
 export interface DrawState {
-  count: number; // 제비 수(=인원수)
+  count: number; // 제비 수
   blanks: number; // 꽝 개수
+  perPick: number; // 참가자 1인당 뽑기 상한(= ceil(제비수/사람수), 보통 1). 제비수 > 사람수면 2 이상
   picks: DrawPick[]; // 이미 뽑힌 제비들(순서 무관)
 }
 
@@ -141,6 +152,39 @@ export interface DrawState {
 export interface DrawShuffledPayload {
   count: number;
   blanks: number;
+  perPick: number; // 참가자 1인당 뽑기 상한(제비수 > 사람수면 2 이상)
+}
+
+// ---------------------------------------------------------------------------
+// 풍선 터뜨리기 (러시안 룰렛식, 턴제) — game:result 없이 balloon:* 이벤트로 진행.
+//   host 가 풍선 크기(=최대 펌프 수)를 정해 시작(balloon:start)하면 서버가 1..크기 사이의
+//   비밀 '터지는 순번'을 정한다. 참가자들이 순서대로 가운데 풍선을 한 번씩 펌프하고(balloon:pop),
+//   누적 펌프가 그 순번에 도달하는 순간 펌프한 사람이 걸린다(caughtBy). 순번은 걸리기 전까지 안 온다.
+// ---------------------------------------------------------------------------
+
+/** 풍선 게임 상태 — 재접속/늦은 입장 복원(room:state.balloon). burstAt(터지는 순번)은 서버 비밀이라 없다. */
+export interface BalloonState {
+  capacity: number; // 풍선 크기(이만큼 펌프하면 반드시 터짐)
+  pumps: number; // 지금까지 누적 펌프 수
+  turnOrder: string[]; // 참가자 닉네임 순서
+  turn: string | null; // 현재 턴 참가자(걸린 뒤 null)
+  caughtBy: string | null; // 풍선을 터뜨려 걸린 참가자(진행 중이면 null)
+}
+
+/** `balloon:started` — 게임 시작(터지는 순번은 비밀). */
+export interface BalloonStartedPayload {
+  capacity: number;
+  turnOrder: string[];
+  turn: string;
+}
+
+/** `balloon:popped` — 누군가 풍선을 한 번 펌프할 때마다. */
+export interface BalloonPoppedPayload {
+  by: string; // 이번에 펌프한 참가자
+  pumps: number; // 갱신된 누적 펌프 수
+  turn: string | null; // 다음 턴 참가자 — 걸렸으면 null
+  caughtBy: string | null; // 이 펌프로 터져 걸렸으면 그 사람, 아니면 null
+  burst: boolean; // 이 펌프로 풍선이 터졌는지
 }
 
 // ---------------------------------------------------------------------------
@@ -200,4 +244,8 @@ export interface VoteResult {
  * 게임 결과 통합 — `result.type` 으로 좁혀서 화면 분기.
  * 사다리는 game:result 를 쓰지 않고 ladder:* 이벤트로 진행하므로 여기 없다.
  */
-export type GameResult = SingleWinnerResult | MultiWinnerResult | VoteResult;
+export type GameResult =
+  | SingleWinnerResult
+  | MultiWinnerResult
+  | OrderResult
+  | VoteResult;

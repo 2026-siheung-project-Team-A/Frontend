@@ -11,7 +11,9 @@ import { VotePlay } from '../../features/game/components/VotePlay';
 import { GameStage } from '../../features/game/components/GameStage';
 import { Ladder } from '../../features/game/components/Ladder';
 import { DrawPlay } from '../../features/game/components/DrawPlay';
+import { BalloonPlay } from '../../features/game/components/BalloonPlay';
 import { DrawResult } from '../../features/game/components/results/DrawResult';
+import { OrderResult } from '../../features/game/components/results/OrderResult';
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
@@ -52,6 +54,8 @@ export function GameRoomPage() {
   const ladderResult = useRoomStore((s) => s.ladderResult);
   const draw = useRoomStore((s) => s.draw);
   const drawRound = useRoomStore((s) => s.drawRound);
+  const balloon = useRoomStore((s) => s.balloon);
+  const balloonRound = useRoomStore((s) => s.balloonRound);
   const rouletteDraft = useRoomStore((s) => s.rouletteDraft);
 
   const [myVote, setMyVote] = useState<string | null>(null);
@@ -93,6 +97,10 @@ export function GameRoomPage() {
     const s = socketRef.current;
     return s ? gameSocket.pickDraw(s, index) : Promise.resolve({ ok: false });
   };
+  const popBalloon = () => {
+    const s = socketRef.current;
+    return s ? gameSocket.popBalloon(s) : Promise.resolve({ ok: false });
+  };
 
   const rouletteWinner =
     result && result.type === 'roulette' ? result.winner : null;
@@ -123,6 +131,7 @@ export function GameRoomPage() {
     st.setTally([]);
     st.resetLadder();
     st.resetDraw();
+    st.resetBalloon();
     st.setStatus('waiting');
     setMyVote(null);
   };
@@ -195,6 +204,22 @@ export function GameRoomPage() {
           onLeave={goHome}
         />
       );
+    } else if (gameType === 'balloon') {
+      // 풍선 러시안룰렛 — 내 턴일 때만 풍선을 터뜨린다. 폭탄을 터뜨리면 걸린다.
+      content = (
+        <BalloonPlay
+          roomId={roomId}
+          isHost={false}
+          me={nickname}
+          balloon={balloon}
+          round={balloonRound}
+          playerCount={participants.length}
+          onStart={() => Promise.resolve({ ok: false })}
+          onPop={popBalloon}
+          onReturn={returnToRoom}
+          onLeave={goHome}
+        />
+      );
     } else if (gameType === 'vote') {
       if (items.length > 0) {
         content = (
@@ -257,6 +282,8 @@ export function GameRoomPage() {
         <ResultModal onReturn={returnToRoom} countdown={secondsLeft}>
           {result.type === 'vote' ? (
             <VoteResult result={result} />
+          ) : result.type === 'order' ? (
+            <OrderResult result={result} />
           ) : (
             <DrawResult result={result} />
           )}

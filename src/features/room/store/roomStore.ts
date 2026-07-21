@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import type {
+  BalloonPoppedPayload,
+  BalloonStartedPayload,
+  BalloonState,
   DrawPick,
   DrawShuffledPayload,
   DrawState,
@@ -53,6 +56,10 @@ interface RoomState {
   draw: DrawState | null; // 현재 제비판(제비 수·꽝 수·뽑힌 제비들). null=아직 안 섞음
   drawRound: number; // 섞기 라운드 nonce — 값이 바뀌면 섞기 애니메이션을 다시 재생
 
+  // 풍선 러시안룰렛(턴제) — balloon:started/popped + room:state.balloon 로 복원
+  balloon: BalloonState | null; // 진행 중 풍선 상태. null=아직 시작 전
+  balloonRound: number; // 시작 라운드 nonce — 값이 바뀌면 풍선판을 다시 그린다
+
   // 원판(룰렛) 실시간 편집 미리보기 — roulette:draft. 저장 전 상태라 room:state 로 복원되지 않는다.
   rouletteDraft: string[];
 
@@ -83,6 +90,9 @@ interface RoomState {
   applyDrawShuffled: (payload: DrawShuffledPayload) => void;
   applyDrawPicked: (payload: DrawPick) => void;
   resetDraw: () => void;
+  applyBalloonStarted: (payload: BalloonStartedPayload) => void;
+  applyBalloonPopped: (payload: BalloonPoppedPayload) => void;
+  resetBalloon: () => void;
   setRouletteDraft: (labels: string[]) => void;
   reset: () => void;
 }
@@ -106,6 +116,8 @@ const initial = {
   ladderResult: null as LadderResultPayload | null,
   draw: null as DrawState | null,
   drawRound: 0,
+  balloon: null as BalloonState | null,
+  balloonRound: 0,
   rouletteDraft: [] as string[],
   connection: 'idle' as ConnectionStatus,
   roomError: null as ErrorCode | null,
@@ -134,6 +146,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       ladderRevealed: state.ladderRevealed ?? [],
       // 진행 중 제비판도 그대로 복원(뽑힌 제비만 blank 공개된 상태로 온다).
       draw: state.draw ?? null,
+      balloon: state.balloon ?? null,
     }),
   setStatus: (status) => set({ status }),
   setGameType: (gameType) => set({ gameType }),
@@ -180,7 +193,12 @@ export const useRoomStore = create<RoomState>((set) => ({
   // 제비 섞기 — 새 라운드. picks 비우고 라운드 nonce 를 올려 섞기 애니메이션을 재생, 화면은 진행(playing)으로.
   applyDrawShuffled: (payload) =>
     set((s) => ({
-      draw: { count: payload.count, blanks: payload.blanks, picks: [] },
+      draw: {
+        count: payload.count,
+        blanks: payload.blanks,
+        perPick: payload.perPick,
+        picks: [],
+      },
       drawRound: s.drawRound + 1,
       status: 'playing',
     })),
@@ -192,6 +210,36 @@ export const useRoomStore = create<RoomState>((set) => ({
       return { draw: { ...s.draw, picks: [...s.draw.picks, payload] } };
     }),
   resetDraw: () => set({ draw: null }),
+
+  // 풍선 시작 — 서버가 정한 크기·턴 순서로 새 판을 그린다. 라운드 nonce 올려 애니 재생, 진행(playing).
+  applyBalloonStarted: (payload) =>
+    set((s) => ({
+      balloon: {
+        capacity: payload.capacity,
+        pumps: 0,
+        turnOrder: payload.turnOrder,
+        turn: payload.turn,
+        caughtBy: null,
+      },
+      balloonRound: s.balloonRound + 1,
+      status: 'playing',
+    })),
+  // 풍선 한 번 펌프 — 누적 펌프 수·턴·걸린 사람을 서버 값으로 갱신. balloon 없으면 무시.
+  applyBalloonPopped: (payload) =>
+    set((s) => {
+      if (!s.balloon) return s;
+      // 늦게 도착한 옛 이벤트가 최신 펌프 수를 되돌리지 않게 한다(멱등·단조 증가).
+      if (payload.pumps < s.balloon.pumps) return s;
+      return {
+        balloon: {
+          ...s.balloon,
+          pumps: payload.pumps,
+          turn: payload.turn,
+          caughtBy: payload.caughtBy,
+        },
+      };
+    }),
+  resetBalloon: () => set({ balloon: null }),
 
   setRouletteDraft: (rouletteDraft) => set({ rouletteDraft }),
 
