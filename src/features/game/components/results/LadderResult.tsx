@@ -1,20 +1,20 @@
-import type { LadderResult as LadderResultData } from '../../../../shared/types/api';
+import type { LadderResultPayload } from '../../../../shared/types/api';
 
 /**
- * 사다리 결과 콘텐츠 — 항목별 매칭(from → to). ResultModal 안에 렌더된다.
- * 백엔드 사다리 엔진은 항목들을 무작위 재배치해 from→to 매핑을 만든다.
+ * 사다리 결과 콘텐츠 — 시작칸(이름) → 도착칸(당첨항목) 매칭. ResultModal 안에 렌더된다.
+ * 서버 ladder:result 의 pairs(topIndex 순서)를 그대로 보여준다.
  */
-export function LadderResult({ result }: { result: LadderResultData }) {
+export function LadderResult({ result }: { result: LadderResultPayload }) {
   return (
     <>
-      <p className="muted center">항목별 매칭 결과</p>
+      <p className="muted center">사다리 결과</p>
 
       <div className="stack-sm" style={{ marginTop: 16 }}>
-        {result.matching.map((m) => (
-          <div key={m.from.id} className="ladder-match">
-            <span className="ladder-from">{m.from.label}</span>
+        {result.pairs.map((p) => (
+          <div key={p.topIndex} className="ladder-match">
+            <span className="ladder-from">{p.topLabel || '　'}</span>
             <span className="ladder-arrow">→</span>
-            <span className="ladder-to">{m.to.label}</span>
+            <span className="ladder-to">{p.bottomLabel || '　'}</span>
           </div>
         ))}
       </div>

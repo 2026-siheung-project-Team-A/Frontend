@@ -3,9 +3,14 @@ import type { Socket } from 'socket.io-client';
 import { connectRoom } from '../../../shared/lib/socket';
 import { useRoomStore } from '../store/roomStore';
 import type {
+  DrawPick,
+  DrawShuffledPayload,
   ErrorCode,
   GameResult,
   Item,
+  LadderBuiltPayload,
+  LadderResultPayload,
+  LadderRevealedPayload,
   ParticipantChangePayload,
   RoomStatePayload,
   VoteTallyEntry,
@@ -95,8 +100,24 @@ export function useRoomConnection(
     socket.on('game:selected', (p: { gameType: RoomStatePayload['gameType'] }) => {
       useRoomStore.getState().setGameType(p.gameType);
     });
-    socket.on('game:started', () => {
-      useRoomStore.getState().setStatus('playing');
+    // 새 라운드 시작 — 이전 라운드 잔여물(결과·집계·사다리·제비·원판 초안)을 먼저 지운다.
+    // 안 그러면 아직 방으로 안 돌아온 참가자 화면에 옛 결과 모달이 새 게임 위에 남고,
+    // 강퇴 타이머가 안 꺼지며, 룰렛 당첨자가 옛 값으로 오염된다.
+    const startRound = () => {
+      const st = useRoomStore.getState();
+      st.setResult(null);
+      st.setTally([]);
+      st.resetLadder();
+      st.resetDraw();
+      st.setRouletteDraft([]);
+      st.setStatus('playing');
+    };
+    socket.on('game:started', startRound);
+    // '게임 시작 ▶' — 결과 전이지만 참가자도 곧장 게임 화면으로(대기 화면 탈출).
+    socket.on('game:begin', startRound);
+    // 원판 실시간 편집 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 제외).
+    socket.on('roulette:draft', (p: { labels: string[] }) => {
+      useRoomStore.getState().setRouletteDraft(p.labels ?? []);
     });
     socket.on('game:result', (p: { result: GameResult }) => {
       const st = useRoomStore.getState();
@@ -108,19 +129,37 @@ export function useRoomConnection(
     socket.on('vote:updated', (p: { tally: VoteTallyEntry[] }) => {
       useRoomStore.getState().setTally(p.tally);
     });
-    socket.on('game:reset', () => {
-      const st = useRoomStore.getState();
-      st.setResult(null);
-      st.setTally([]);
-      st.setStatus('waiting');
+
+    // ── 사다리(네이버 스타일): 시작(built)·시작칸 공개(revealed)·결과 보기(result) ──
+    // host·참가자 모두 같은 이벤트를 받아 같은 사다리·같은 내려가는 과정을 본다.
+    socket.on('ladder:built', (p: LadderBuiltPayload) => {
+      useRoomStore.getState().applyLadderBuilt(p);
     });
+    socket.on('ladder:revealed', (p: LadderRevealedPayload) => {
+      useRoomStore.getState().applyLadderRevealed(p);
+    });
+    socket.on('ladder:result', (p: LadderResultPayload) => {
+      useRoomStore.getState().applyLadderResult(p);
+    });
+
+    // ── 제비뽑기(인터랙티브): 섞기(shuffled)·뽑힘(picked) ──
+    // host·참가자 모두 같은 이벤트를 받아 같은 제비판을 본다(뽑힌 제비만 꽝 여부 공개).
+    socket.on('draw:shuffled', (p: DrawShuffledPayload) => {
+      useRoomStore.getState().applyDrawShuffled(p);
+    });
+    socket.on('draw:picked', (p: DrawPick) => {
+      useRoomStore.getState().applyDrawPicked(p);
+    });
+
     socket.on('online:count', (p: { onlineCount: number }) => {
       useRoomStore.getState().setOnlineCount(p.onlineCount);
     });
 
     // ── 종료·에러 ───────────────────────────────────────────────────
+    // 방 삭제는 참가자만 '방이 삭제됨' 상태로 만든다. 호스트는 스스로 삭제하고 이미 홈으로
+    // 이동하므로, 자기 broadcast(room:closed)를 받아 홈에서 삭제 모달이 뜨는 일을 막는다.
     socket.on('room:closed', () => {
-      useRoomStore.getState().setClosed(true);
+      if (role === 'participant') useRoomStore.getState().setClosed(true);
     });
     socket.on('error', (e: { code: ErrorCode; message?: string }) => {
       if (e?.code) useRoomStore.getState().setError(e.code);

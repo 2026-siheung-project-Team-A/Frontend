@@ -24,6 +24,8 @@ export type ErrorCode =
   | 'NICKNAME_TAKEN'
   | 'NEED_MORE_ITEMS'
   | 'GAME_RUNNING'
+  | 'ALREADY_PICKED'
+  | 'ROOM_LOCKED'
   | 'VALIDATION_ERROR';
 
 /** REST 공통 응답 봉투 */
@@ -79,6 +81,13 @@ export interface RoomStatePayload {
   participants: string[]; // 닉네임 목록
   participantCount: number;
   onlineCount: number; // 이 방에 연결된 소켓 수(닉네임 확정 전 포함)
+  // 사다리가 진행 중이면 그 구조·상하단 라벨(build 스냅샷)·이미 공개된 시작칸 — 재접속/늦은 입장 복원.
+  ladder: LadderStructure | null;
+  ladderTopLabels: string[]; // 상단 라벨(이름)
+  ladderBottomLabels: string[]; // 하단 라벨(당첨항목)
+  ladderRevealed: number[]; // 이미 공개된 시작칸 index 들
+  // 제비뽑기가 진행 중이면 그 판(제비 수·꽝 수·뽑힌 제비들). 뽑힌 제비만 blank 공개(스포일러 방지).
+  draw: DrawState | null;
 }
 
 /** `participant:joined` / `participant:left` broadcast 페이로드 (전체 목록 포함) */
@@ -99,23 +108,79 @@ export interface SingleWinnerResult {
   winner: Item;
 }
 
-/** 제비뽑기·풍선터뜨리기: N개 당첨 */
+/** 풍선터뜨리기: N개 당첨 (제비뽑기는 game:result 를 쓰지 않고 draw:* 이벤트로 진행) */
 export interface MultiWinnerResult {
   type: 'draw' | 'balloon';
   winners: Item[];
   winnerCount: number;
 }
 
-/** 사다리 매칭 한 줄 — 시작 항목 → 도착 항목 */
-export interface LadderMatch {
-  from: Item;
-  to: Item;
+// ---------------------------------------------------------------------------
+// 제비뽑기(인터랙티브) — game:result 를 쓰지 않고 draw:* 이벤트로 진행.
+//   host 가 인원수(=제비 수)·꽝 개수를 정해 draw:shuffle → 서버가 꽝 위치를 무작위 배치해
+//   전원에게 draw:shuffled 로 알린다(꽝 위치는 숨김, 다 함께 섞기 애니메이션).
+//   host·참가자 누구나 draw:pick(index) → 먼저 뽑은 사람이 잠근다(HSETNX). 뽑는 순간
+//   그 제비의 꽝 여부만 공개돼 draw:picked 로 broadcast. 이미 뽑힌 제비는 GAME_RUNNING 으로 거절.
+// ---------------------------------------------------------------------------
+
+/** 뽑힌 제비 하나 — index 제비를 by 가 뽑았고 꽝(blank) 여부가 공개됨. host 는 by='호스트'. */
+export interface DrawPick {
+  index: number;
+  by: string;
+  blank: boolean; // true=꽝, false=안전
 }
 
-/** 사다리타기: 항목 무작위 재배치 매핑 */
-export interface LadderResult {
-  type: 'ladder';
-  matching: LadderMatch[];
+/** 제비판 상태 — 재접속/늦은 입장 복원(room:state.draw). 뽑힌 제비만 blank 공개(스포일러 방지). */
+export interface DrawState {
+  count: number; // 제비 수(=인원수)
+  blanks: number; // 꽝 개수
+  picks: DrawPick[]; // 이미 뽑힌 제비들(순서 무관)
+}
+
+/** `draw:shuffled` — 새 라운드 시작 신호(꽝 위치는 숨김). 전원이 섞기 애니메이션을 함께 본다. */
+export interface DrawShuffledPayload {
+  count: number;
+  blanks: number;
+}
+
+// ---------------------------------------------------------------------------
+// 사다리타기(네이버 스타일) — game:result 를 쓰지 않고 ladder:* 이벤트로 진행.
+//   host 가 칸마다 상단(이름)·하단(당첨항목)을 편집 → ladder:build → 서버가 가로줄 생성.
+//   host 가 시작칸 클릭 → ladder:reveal, '결과 보기' → ladder:result.
+// ---------------------------------------------------------------------------
+
+/** 가로줄 하나 — row 행에서 세로줄 col 과 col+1 을 잇는다. */
+export interface LadderRung {
+  row: number;
+  col: number;
+}
+
+/** 사다리 구조 — 서버가 한 번 생성해 전원에게 broadcast(같은 사다리를 그린다). */
+export interface LadderStructure {
+  columns: number; // 세로줄(칸) 수
+  rows: number; // 행 수(가로줄 높이)
+  rungs: LadderRung[]; // 놓인 가로줄들
+  mapping: number[]; // mapping[i] = 시작칸 i 의 도착칸 (항상 순열)
+}
+
+/** `ladder:built` — 사다리 구조 + 상·하단 라벨 스냅샷 */
+export interface LadderBuiltPayload {
+  ladder: LadderStructure;
+  topLabels: string[];
+  bottomLabels: string[];
+}
+
+/** `ladder:revealed` — 방금 공개된 시작칸과 그 도착(상·하단 라벨 포함) */
+export interface LadderRevealedPayload {
+  topIndex: number;
+  bottomIndex: number;
+  topLabel: string;
+  bottomLabel: string;
+}
+
+/** `ladder:result` — 전체 상단→하단 매칭(모달을 전원 동시에 연다) */
+export interface LadderResultPayload {
+  pairs: LadderRevealedPayload[]; // topIndex 0..columns-1 순서
 }
 
 /** 투표 집계 한 줄 — 항목과 득표 수 */
@@ -131,9 +196,8 @@ export interface VoteResult {
   winner: Item; // 최다 득표(동점이면 항목 순서상 먼저)
 }
 
-/** 게임 결과 통합 — `result.type` 으로 좁혀서 화면 분기 */
-export type GameResult =
-  | SingleWinnerResult
-  | MultiWinnerResult
-  | LadderResult
-  | VoteResult;
+/**
+ * 게임 결과 통합 — `result.type` 으로 좁혀서 화면 분기.
+ * 사다리는 game:result 를 쓰지 않고 ladder:* 이벤트로 진행하므로 여기 없다.
+ */
+export type GameResult = SingleWinnerResult | MultiWinnerResult | VoteResult;

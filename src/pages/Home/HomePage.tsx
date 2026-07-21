@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
 import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
+import { RoomClosedModal } from '../../features/room/components/RoomClosedModal';
 import { Screen, Button } from '../../shared/ui';
 import heroImg from '../../assets/hero.png';
 
@@ -15,7 +16,12 @@ import heroImg from '../../assets/hero.png';
  */
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [code, setCode] = useState('');
+  // 호스트가 방을 삭제해 메인으로 튕겨온 참가자에게 알림 모달을 띄운다.
+  // 이 신호는 참가자 화면(GameRoomPage)이 navigate state 로만 넘긴다 — 호스트(/host)는 이 경로가
+  // 없어 스스로 방을 삭제해도 이 모달이 절대 뜨지 않는다.
+  const roomDeleted = (location.state as { roomDeleted?: boolean } | null)?.roomDeleted ?? false;
 
   const create = useMutation({
     // 게임 종류는 방 안에서 호스트가 고른다(② GameSelect → game:select).
@@ -37,6 +43,7 @@ export function HomePage() {
   };
 
   return (
+    <>
     <Screen>
       <p className="brand">Pick Me Up</p>
 
@@ -85,5 +92,14 @@ export function HomePage() {
         </div>
       </div>
     </Screen>
+    {roomDeleted && (
+      <RoomClosedModal
+        onConfirm={() => {
+          useRoomStore.getState().reset();
+          navigate('/', { replace: true }); // state 를 비워 모달을 닫는다(뒤로가기로 다시 안 뜨게).
+        }}
+      />
+    )}
+    </>
   );
 }
