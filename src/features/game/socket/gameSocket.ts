@@ -9,6 +9,8 @@ export const gameSocket = {
   addItem: (socket: Socket, label: string) => socket.emit('item:add', { label }),
   removeItem: (socket: Socket, itemId: string) =>
     socket.emit('item:remove', { itemId }),
+  reorderItems: (socket: Socket, order: string[]) =>
+    socket.emit('item:reorder', { order }),
 
   // 게임 진행 (host)
   selectGame: (socket: Socket, gameType: string) =>
@@ -16,9 +18,9 @@ export const gameSocket = {
   startGame: (socket: Socket) => socket.emit('game:start', {}),
   resetGame: (socket: Socket) => socket.emit('game:reset'),
 
-  // 투표
-  castVote: (socket: Socket, optionId: string) =>
-    socket.emit('vote:cast', { optionId }),
+  // 투표 (참가자 vote:cast / host vote:close) — 백엔드는 payload.itemId 를 읽는다
+  castVote: (socket: Socket, itemId: string) =>
+    socket.emit('vote:cast', { itemId }),
   closeVote: (socket: Socket) => socket.emit('vote:close'),
 
   // Server → Client

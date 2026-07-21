@@ -8,7 +8,8 @@ import type {
 /**
  * 방 REST 호출.
  * TanStack Query의 queryFn/mutationFn 으로 사용.
- * TODO: 에러 응답(error.code) 처리
+ * 백엔드는 실패 시 4xx + { success:false, error:{ code } } 로 응답 → axios가 reject한다.
+ * 호출부는 onError에서 shared/lib/apiError 의 getApiErrorCode(err) 로 코드를 꺼내 처리한다.
  */
 export const roomApi = {
   /** POST /api/rooms — 방 생성 */
