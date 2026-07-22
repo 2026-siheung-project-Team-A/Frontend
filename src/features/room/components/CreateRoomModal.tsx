@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CreateRoomInput, GameType } from '../../../shared/types/api';
-import { Button, GameIcon } from '../../../shared/ui';
+import { Button, GameIcon, LockIcon } from '../../../shared/ui';
 
 /** 방 만들기 모달에서 고르는 6종 게임. */
 const GAMES: { type: GameType; label: string }[] = [
@@ -123,7 +123,9 @@ export function CreateRoomModal({
             className={`crm-seg-btn${secret ? ' is-on' : ''}`}
             onClick={() => setSecret(true)}
           >
-            🔒 비밀방
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <LockIcon size={15} /> 비밀방
+            </span>
           </button>
         </div>
 

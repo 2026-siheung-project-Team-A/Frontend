@@ -46,6 +46,7 @@ const MIN_SLOTS = 6;
 
 export function GameLobby({
   roomId,
+  title,
   joinUrl,
   participants,
   readyPlayers,
@@ -59,6 +60,7 @@ export function GameLobby({
   onDeleteRoom,
 }: {
   roomId: string;
+  title?: string; // 방 이름(호스트가 방 만들 때 입력). 있으면 상단 제목으로 보여준다.
   joinUrl?: string;
   participants: string[]; // 닉네임 목록
   readyPlayers?: string[]; // 게임 후 로비로 돌아온 참가자(호스트·복귀한 참가자 모두 전달). 없으면 전원 준비된 것으로 본다.
@@ -121,7 +123,7 @@ export function GameLobby({
       }
     >
       <TopBar
-        title="게임 대기방"
+        title={title?.trim() ? title : '게임 대기방'}
         onBack={() => setConfirmLeave(true)}
         trailing={<span className="chip">#{roomId}</span>}
       />

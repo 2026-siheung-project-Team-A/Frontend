@@ -39,6 +39,7 @@ export function GameRoomPage() {
   const status = useRoomStore((s) => s.status);
   const setStatus = useRoomStore((s) => s.setStatus);
   const gameType = useRoomStore((s) => s.gameType);
+  const title = useRoomStore((s) => s.title);
   const nickname = useRoomStore((s) => s.nickname);
   const participants = useRoomStore((s) => s.participants);
   const readyPlayers = useRoomStore((s) => s.readyPlayers);
@@ -53,8 +54,10 @@ export function GameRoomPage() {
   const ladderBottomLabels = useRoomStore((s) => s.ladderBottomLabels);
   const ladderRevealed = useRoomStore((s) => s.ladderRevealed);
   const ladderResult = useRoomStore((s) => s.ladderResult);
+  const ladderDraft = useRoomStore((s) => s.ladderDraft);
   const draw = useRoomStore((s) => s.draw);
   const drawRound = useRoomStore((s) => s.drawRound);
+  const drawDraft = useRoomStore((s) => s.drawDraft);
   const balloon = useRoomStore((s) => s.balloon);
   const balloonRound = useRoomStore((s) => s.balloonRound);
   const rouletteDraft = useRoomStore((s) => s.rouletteDraft);
@@ -93,6 +96,11 @@ export function GameRoomPage() {
     const id = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
   }, [onResult]);
+
+  // 로비로 돌아오면(내가 복귀했거나 호스트가 게임을 취소해 전원 복귀) 이전 라운드의 내 투표 선택을 비운다.
+  useEffect(() => {
+    if (status === 'waiting') setMyVote(null);
+  }, [status]);
 
   // 호스트가 방을 삭제하면(room:closed) 참가자를 메인으로 보낸다. 삭제 알림은 store 플래그가 아니라
   // 네비게이션 state 로 넘겨, 이 로직이 없는 호스트 화면(/host)에서는 절대 뜨지 않게 한다.
@@ -199,6 +207,8 @@ export function GameRoomPage() {
           topLabels={ladderTopLabels}
           bottomLabels={ladderBottomLabels}
           revealed={ladderRevealed}
+          draftTopLabels={ladderDraft.topLabels}
+          draftBottomLabels={ladderDraft.bottomLabels}
           onBuild={() => {}}
           onReveal={() => {}}
           onResult={() => {}}
@@ -214,6 +224,8 @@ export function GameRoomPage() {
           me={nickname}
           draw={draw}
           round={drawRound}
+          draftCount={drawDraft?.count}
+          draftBlanks={drawDraft?.blanks}
           onShuffle={() => {}}
           onPick={pickDraw}
           onReturn={returnToRoom}
@@ -282,6 +294,7 @@ export function GameRoomPage() {
     content = (
       <GameLobby
         roomId={roomId}
+        title={title}
         participants={participants}
         readyPlayers={readyPlayers}
         onlineCount={onlineCount}

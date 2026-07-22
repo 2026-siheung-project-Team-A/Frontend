@@ -154,6 +154,25 @@ export function SoundOffIcon(props: IconProps) {
   );
 }
 
+/** 비밀방 자물쇠 — 둥근 금색 몸통 + 고리(shackle) + 열쇠구멍. 자체 색(듀오톤)이라 currentColor 아님. */
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M7.7 10.6 V8.2 A4.3 4.3 0 0 1 16.3 8.2 V10.6"
+        fill="none"
+        stroke="#c88a2e"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <rect x="4.6" y="10.3" width="14.8" height="10.4" rx="2.4" fill="#f5b13f" />
+      <path d="M6.4 12.9 h11.2" stroke="#fff" strokeOpacity="0.28" strokeWidth="1" strokeLinecap="round" />
+      <circle cx="12" cy="14.7" r="1.7" fill="#8a5713" />
+      <path d="M11.25 15.1 h1.5 l-0.35 3 h-0.8 Z" fill="#8a5713" />
+    </Svg>
+  );
+}
+
 /** GameType → 게임 아이콘 매핑. */
 export function GameIcon({
   type,

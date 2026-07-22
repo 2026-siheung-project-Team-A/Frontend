@@ -1365,6 +1365,33 @@ input {
   color: var(--rw-rim);
   text-align: center;
 }
+/* 안내문 옆 60초 카운트다운 */
+.jb-headline-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.jb-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  background: var(--field);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.jb-countdown.is-urgent {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .jb-wait {
   margin: auto 0;
   color: #8a7d63;
@@ -1443,6 +1470,17 @@ input {
   white-space: nowrap;
 }
 
+/* 참가자 설정 미리보기 — '호스트가 준비 중' 밑에 제비 수·꽝 개수 */
+.jb-setup-counts {
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.jb-setup-counts b {
+  color: var(--accent);
+}
 .jb-status {
   margin: 0;
   font-size: 13px;

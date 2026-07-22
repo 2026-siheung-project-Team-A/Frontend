@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
 import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
-import { Screen, Button, Loading, ErrorView, GoHomeButton } from '../../shared/ui';
+import { Screen, Button, Loading, ErrorView, GoHomeButton, LockIcon } from '../../shared/ui';
 
 const PIN_MAX = 6;
 
@@ -117,7 +117,11 @@ export function JoinRoomPage() {
 
       {isSecret && (
         <div className="field" style={{ marginTop: 20 }}>
-          <label className="section-label">🔒 비밀번호</label>
+          <label className="section-label">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <LockIcon size={14} /> 비밀번호
+            </span>
+          </label>
           <input
             className="input"
             inputMode="numeric"

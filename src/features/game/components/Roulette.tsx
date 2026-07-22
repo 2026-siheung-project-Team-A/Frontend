@@ -189,7 +189,7 @@ export function Roulette({
         ) : undefined
       }
     >
-      <TopBar title="원판 돌리기" onBack={onLeave} />
+      <TopBar title="원판 돌리기" onBack={isHost ? onLeave : undefined} />
       {editable && (
         <div className="rw-count">
           <span>옵션 개수</span>

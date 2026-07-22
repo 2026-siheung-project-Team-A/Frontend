@@ -16,4 +16,5 @@ export {
   CrownIcon,
   SoundOnIcon,
   SoundOffIcon,
+  LockIcon,
 } from './icons';
