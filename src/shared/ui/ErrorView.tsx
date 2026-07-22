@@ -49,6 +49,11 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
     title: '이미 제비를 뽑았어요',
     desc: '한 사람당 하나만 뽑을 수 있어요.',
   },
+  NOT_ENOUGH_STICKS: {
+    emoji: '🎋',
+    title: '제비가 부족해요',
+    desc: '제비 수를 참가자 수 이상으로 설정해 주세요.',
+  },
   NEED_MORE_PLAYERS: {
     emoji: '👥',
     title: '참가자가 더 필요해요',

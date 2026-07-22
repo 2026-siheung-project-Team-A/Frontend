@@ -25,6 +25,7 @@ export type ErrorCode =
   | 'NEED_MORE_ITEMS'
   | 'GAME_RUNNING'
   | 'ALREADY_PICKED'
+  | 'NOT_ENOUGH_STICKS'
   | 'NEED_MORE_PLAYERS'
   | 'NOT_YOUR_TURN'
   | 'PUMP_LIMIT'

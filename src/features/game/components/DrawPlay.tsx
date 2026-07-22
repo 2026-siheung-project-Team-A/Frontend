@@ -138,7 +138,12 @@ export function DrawPlay({
     prevParticipantCount.current = pc;
   }, [isHost, participantCount, onDraftChange]);
 
+  // 제비 수가 참가자 수보다 적으면 게임을 시작할 수 없다(모든 참가자가 1인 1제비를 뽑아야 한다).
+  const pc = participantCount ?? 0;
+  const tooFewSticks = isHost && count < pc;
+
   const shuffle = () => {
+    if (tooFewSticks) return;
     setNote(null);
     onShuffle(count, blanks);
   };
@@ -204,7 +209,9 @@ export function DrawPlay({
   // ── 상단 안내 문구 ──
   const headline = !draw
     ? isHost
-      ? '버튼을 눌러 제비를 섞어 주세요'
+      ? tooFewSticks
+        ? `제비 수를 참가자 수(${pc}명) 이상으로 설정해 주세요`
+        : '버튼을 눌러 제비를 섞어 주세요'
       : '호스트가 제비를 준비하고 있어요…'
     : done
       ? '모든 제비를 뽑았어요'
@@ -246,13 +253,13 @@ export function DrawPlay({
     draw ? (
       <div className="grid-2">
         <Button variant="secondary" onClick={onReturn}>방으로 돌아가기</Button>
-        <Button onClick={shuffle} disabled={!done}>
+        <Button onClick={shuffle} disabled={!done || tooFewSticks}>
           <span className="jb-btn-ico" aria-hidden="true">↻</span>
           다시 섞기
         </Button>
       </div>
     ) : (
-      <Button block onClick={shuffle}>
+      <Button block onClick={shuffle} disabled={tooFewSticks}>
         <span className="jb-btn-ico" aria-hidden="true">↻</span>
         제비 섞기
       </Button>
