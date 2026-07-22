@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppShell, DisconnectBanner } from './shared/ui';
+import { SoundToggle } from './shared/ui/SoundToggle';
+import { useGameSounds } from './shared/lib/useGameSounds';
 import { HomePage } from './pages/Home/HomePage';
 import { HostRoomPage } from './pages/HostRoom/HostRoomPage';
 import { JoinRoomPage } from './pages/JoinRoom/JoinRoomPage';
@@ -18,10 +20,13 @@ import { NotFoundPage } from './pages/NotFound/NotFoundPage';
  * DisconnectBanner가 소켓 끊김을 상단에 상시 알린다.
  */
 function App() {
+  // 게임 효과음 — store 변화를 관찰해 서버 이벤트 시점에 게임별 소리를 낸다(전역 1회 배선).
+  useGameSounds();
   return (
     <BrowserRouter>
       <AppShell>
         <DisconnectBanner />
+        <SoundToggle />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/host/:roomId" element={<HostRoomPage />} />

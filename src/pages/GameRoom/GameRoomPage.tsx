@@ -97,9 +97,13 @@ export function GameRoomPage() {
     const s = socketRef.current;
     return s ? gameSocket.pickDraw(s, index) : Promise.resolve({ ok: false });
   };
-  const popBalloon = () => {
+  const pumpBalloon = () => {
     const s = socketRef.current;
-    return s ? gameSocket.popBalloon(s) : Promise.resolve({ ok: false });
+    return s ? gameSocket.pumpBalloon(s) : Promise.resolve({ ok: false });
+  };
+  const passBalloon = () => {
+    const s = socketRef.current;
+    return s ? gameSocket.passBalloon(s) : Promise.resolve({ ok: false });
   };
 
   const rouletteWinner =
@@ -125,7 +129,10 @@ export function GameRoomPage() {
 
   // 참가자 '방으로 돌아가기' — 결과·진행 데이터를 로컬로 비우고 대기 상태로 → 로비로 돌아온다.
   // (방에는 계속 남아, 호스트가 바꾼 게임/다시 시작을 이어서 본다.)
+  // 서버에도 room:ready 로 복귀를 알려, 호스트가 새 게임을 시작할 수 있게 한다(전원 복귀 게이트).
   const returnToRoom = () => {
+    const s = socketRef.current;
+    if (s) roomSocket.ready(s);
     const st = useRoomStore.getState();
     st.setResult(null);
     st.setTally([]);
@@ -205,7 +212,7 @@ export function GameRoomPage() {
         />
       );
     } else if (gameType === 'balloon') {
-      // 풍선 러시안룰렛 — 내 턴일 때만 풍선을 터뜨린다. 폭탄을 터뜨리면 걸린다.
+      // 풍선 러시안룰렛 — 내 턴에 최대 3번 펌프하고 '넘기기'로 넘긴다. 터진 순번에 걸리면 패배.
       content = (
         <BalloonPlay
           roomId={roomId}
@@ -215,7 +222,8 @@ export function GameRoomPage() {
           round={balloonRound}
           playerCount={participants.length}
           onStart={() => Promise.resolve({ ok: false })}
-          onPop={popBalloon}
+          onPump={pumpBalloon}
+          onPass={passBalloon}
           onReturn={returnToRoom}
           onLeave={goHome}
         />

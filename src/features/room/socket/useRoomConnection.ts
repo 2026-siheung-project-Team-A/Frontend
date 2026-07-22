@@ -3,7 +3,8 @@ import type { Socket } from 'socket.io-client';
 import { connectRoom } from '../../../shared/lib/socket';
 import { useRoomStore } from '../store/roomStore';
 import type {
-  BalloonPoppedPayload,
+  BalloonPassedPayload,
+  BalloonPumpedPayload,
   BalloonStartedPayload,
   DrawPick,
   DrawShuffledPayload,
@@ -14,6 +15,7 @@ import type {
   LadderResultPayload,
   LadderRevealedPayload,
   ParticipantChangePayload,
+  RoomReadyUpdatePayload,
   RoomStatePayload,
   VoteTallyEntry,
 } from '../../../shared/types/api';
@@ -90,6 +92,10 @@ export function useRoomConnection(
     socket.on('participant:left', (p: ParticipantChangePayload) => {
       useRoomStore.getState().setParticipants(p.participants);
     });
+    // 다음 게임 준비(로비로 돌아온 참가자) 목록 — 호스트 로비의 '게임 시작' 게이트에 쓴다.
+    socket.on('room:readyUpdate', (p: RoomReadyUpdatePayload) => {
+      useRoomStore.getState().setReadyPlayers(p.ready);
+    });
 
     // ── 항목(호스트가 추가/삭제하면 전원에게 전체 목록 broadcast) ────
     const onItems = (p: { items: Item[] }) =>
@@ -154,13 +160,16 @@ export function useRoomConnection(
       useRoomStore.getState().applyDrawPicked(p);
     });
 
-    // ── 풍선 러시안룰렛(턴제): 시작(started)·터짐(popped) ──
+    // ── 풍선 러시안룰렛(턴제): 시작(started)·펌프(pumped)·넘기기(passed) ──
     // host·참가자 모두 같은 이벤트를 받아 같은 풍선판·턴을 본다(폭탄 위치는 걸릴 때 드러난다).
     socket.on('balloon:started', (p: BalloonStartedPayload) => {
       useRoomStore.getState().applyBalloonStarted(p);
     });
-    socket.on('balloon:popped', (p: BalloonPoppedPayload) => {
-      useRoomStore.getState().applyBalloonPopped(p);
+    socket.on('balloon:pumped', (p: BalloonPumpedPayload) => {
+      useRoomStore.getState().applyBalloonPumped(p);
+    });
+    socket.on('balloon:passed', (p: BalloonPassedPayload) => {
+      useRoomStore.getState().applyBalloonPassed(p);
     });
 
     socket.on('online:count', (p: { onlineCount: number }) => {

@@ -40,6 +40,7 @@ export function HostRoomPage() {
   const status = useRoomStore((s) => s.status);
   const setStatus = useRoomStore((s) => s.setStatus);
   const participants = useRoomStore((s) => s.participants);
+  const readyPlayers = useRoomStore((s) => s.readyPlayers);
   const onlineCount = useRoomStore((s) => s.onlineCount);
   const storeItems = useRoomStore((s) => s.items);
   const storeResult = useRoomStore((s) => s.result);
@@ -58,6 +59,7 @@ export function HostRoomPage() {
   const [phase, setPhase] = useState<Phase>('select');
   const [gameType, setGameType] = useState<GameType | null>(null);
   const [localResult, setLocalResult] = useState<GameResult | null>(null);
+  const [myVote, setMyVote] = useState<string | null>(null); // 호스트 본인 투표(한 표)
 
   const connected = connection === 'connected';
   const wheelItems = storeItems;
@@ -71,9 +73,13 @@ export function HostRoomPage() {
 
   // '게임 시작 ▶' — 아직 결과도 항목 편집도 안 끝났지만, game:begin 으로 참가자를
   // 대기 화면에서 실제 게임 화면으로 옮겨 이후 과정(목록 작성·게임 진행)을 실시간으로 보게 한다.
-  const beginPlay = () => {
+  // 이전 게임 참가자가 다 안 돌아왔으면(PLAYERS_NOT_READY) 서버가 거절 → 로비에 머문다(로비가 안내한다).
+  const beginPlay = async () => {
     const s = socketRef.current;
-    if (connected && s) gameSocket.beginGame(s);
+    if (connected && s) {
+      const ack = await gameSocket.beginGame(s);
+      if (ack && ack.ok === false) return; // 전원 복귀 전 — 화면 전환하지 않고 로비 유지
+    }
     setPhase('play');
   };
 
@@ -131,6 +137,12 @@ export function HostRoomPage() {
   };
   const finishPlay = () => setStatus('finished');
 
+  // ⑫ 투표 — 호스트도 한 표 던진다(백엔드가 socket.id 로 1표 집계). 다시 누르면 표 이동.
+  const castVote = (itemId: string) => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.castVote(s, itemId);
+    setMyVote(itemId);
+  };
   // ⑫ 투표 '마감'
   const closeVote = () => {
     const s = socketRef.current;
@@ -144,7 +156,7 @@ export function HostRoomPage() {
     if (s) gameSocket.startGame(s);
   };
 
-  // 풍선 러시안룰렛(턴제) — 시작(호스트)·펌프(현재 턴 참가자). host 는 턴이 없어 관전만.
+  // 풍선 러시안룰렛(턴제) — 시작(호스트)·펌프/넘기기(현재 턴 참가자). 호스트도 턴에 참가한다.
   // 시작 ack 를 반환해 참가자 부족(NEED_MORE_PLAYERS) 등 실패를 BalloonPlay 가 안내한다.
   // useCallback 으로 identity 를 고정한다 — BalloonPlay 의 자동시작 useEffect 가 매 렌더마다
   // 재실행돼 balloon:start 를 중복 emit 하지 않도록(socketRef 는 안정적이라 deps 비움).
@@ -152,9 +164,13 @@ export function HostRoomPage() {
     const s = socketRef.current;
     return s ? gameSocket.startBalloon(s, total) : Promise.resolve({ ok: false });
   }, [socketRef]);
-  const popBalloon = () => {
+  const pumpBalloon = () => {
     const s = socketRef.current;
-    return s ? gameSocket.popBalloon(s) : Promise.resolve({ ok: false });
+    return s ? gameSocket.pumpBalloon(s) : Promise.resolve({ ok: false });
+  };
+  const passBalloon = () => {
+    const s = socketRef.current;
+    return s ? gameSocket.passBalloon(s) : Promise.resolve({ ok: false });
   };
 
   // ⑪ 사다리(네이버 스타일) — build(칸별 상·하단 라벨) / reveal(시작칸) / result(결과 보기).
@@ -188,6 +204,7 @@ export function HostRoomPage() {
     const s = socketRef.current;
     if (connected && s) gameSocket.returnToRoom(s); // 서버 데이터 삭제 + status:waiting
     setLocalResult(null);
+    setMyVote(null); // 다음 라운드를 위해 호스트 투표 선택 초기화
     const st = useRoomStore.getState();
     st.setResult(null);
     st.setTally([]);
@@ -220,6 +237,7 @@ export function HostRoomPage() {
         roomId={roomId}
         joinUrl={`${window.location.origin}/r/${roomId}`}
         participants={participants}
+        readyPlayers={readyPlayers}
         onlineCount={onlineCount}
         isHost
         gameType={gameType}
@@ -239,6 +257,8 @@ export function HostRoomPage() {
         items={wheelItems}
         tally={tally}
         isHost
+        myVote={myVote}
+        onVote={castVote}
         onClose={closeVote}
         onAddItem={addItem}
         onRemoveItem={removeItem}
@@ -290,16 +310,18 @@ export function HostRoomPage() {
       />
     );
   } else if (gameType === 'balloon') {
-    // 풍선 러시안룰렛(턴제) — 호스트는 풍선 개수 설정·시작 후 관전(턴 없음)
+    // 풍선 러시안룰렛(턴제) — 호스트도 '호스트'로 턴에 참가한다. 자기 턴에 펌프·넘기기.
     content = (
       <BalloonPlay
         roomId={roomId}
         isHost
+        me="호스트"
         balloon={balloon}
         round={balloonRound}
         playerCount={participants.length}
         onStart={startBalloon}
-        onPop={popBalloon}
+        onPump={pumpBalloon}
+        onPass={passBalloon}
         onReturn={returnToRoom}
         onLeave={goHome}
       />
