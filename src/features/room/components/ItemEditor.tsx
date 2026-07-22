@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Item } from '../../../shared/types/api';
 
 /** 옵션(항목) 최대 개수 — 룰렛·슬롯·풍선·투표 공통 상한(서버 game.service 와 동일) */
@@ -18,13 +18,23 @@ export function ItemEditor({
   onAdd,
   onRemove,
   locked,
+  onDraftChange,
 }: {
   items: Item[];
   onAdd: (label: string) => void;
   onRemove: (id: string) => void;
   locked?: boolean;
+  /** 입력 중인(아직 커밋 안 한) 항목 텍스트를 실시간으로 알린다(순서 정하기 참가자 미리보기용). */
+  onDraftChange?: (text: string) => void;
 }) {
   const [draft, setDraft] = useState('');
+
+  // 입력 중인 항목을 참가자에게 실시간 미리보기로 보낸다(디바운스 150ms). onDraftChange 없으면 무시.
+  useEffect(() => {
+    if (!onDraftChange) return;
+    const t = setTimeout(() => onDraftChange(draft), 150);
+    return () => clearTimeout(t);
+  }, [draft, onDraftChange]);
 
   if (locked) return null;
 
@@ -34,6 +44,7 @@ export function ItemEditor({
     const label = draft.trim();
     if (!label || atMax) return;
     onAdd(label);
+    onDraftChange?.(''); // 커밋되면 '입력 중' 미리보기를 즉시 지운다(항목은 item:add 로 공유됨)
     setDraft('');
   };
 

@@ -44,21 +44,37 @@ export const gameSocket = {
   startGame: (socket: Socket, options?: Record<string, unknown>) =>
     socket.emit('game:start', { options }),
   /**
-   * host '방으로 돌아가기' — 라운드를 접어(결과·투표·사다리·제비뽑기 데이터 삭제) 방을 다시
-   * 대기 상태로 되돌린다. 참가자를 강제 이동시키지 않는다 — 각자 결과창의 '방으로 돌아가기'로 로비에 온다.
+   * host 라운드 접기 — 결과·투표·사다리·제비뽑기 데이터를 삭제해 방을 대기 상태로 되돌린다.
+   *  - notify=false(결과 후 '방으로 돌아가기'): 참가자를 강제 이동시키지 않는다(각자 복귀).
+   *  - notify=true(설정 단계 뒤로가기=게임 취소): 참가자 전원을 로비로 끌어온다(game:cancelled).
    */
-  returnToRoom: (socket: Socket) => socket.emit('room:return'),
+  returnToRoom: (socket: Socket, notify = false) =>
+    socket.emit('room:return', { notify }),
   /**
    * 원판 실시간 편집 미리보기 — 저장하지 않는 relay. 호스트가 원판 칸에 타이핑하는 동안
    * 참가자도 같은 라벨을 실시간으로 본다('돌리기'를 눌러야 addItem 으로 실제 items 확정).
    */
   sendRouletteDraft: (socket: Socket, labels: string[]) =>
     socket.emit('roulette:draft', { labels }),
+  /**
+   * 순서 정하기 항목 실시간 미리보기 — 호스트가 지금 입력 중인(아직 커밋 안 한) 항목 텍스트를
+   * 참가자에게 relay 한다. 커밋된 항목은 item:add 로 이미 공유되므로 이건 '입력 중' 표시용.
+   */
+  sendOrderDraft: (socket: Socket, label: string) =>
+    socket.emit('order:draft', { label }),
 
-  // 투표 (참가자 vote:cast / host vote:close) — 백엔드는 payload.itemId 를 읽는다
+  // 투표 라이프사이클 (host: start/close/cancel/finalize · 참가자·host: cast)
+  //   vote:start  — '투표 시작'(open). 이후 참가자·호스트가 투표할 수 있다.
+  //   vote:cast   — 한 표(참가자·호스트). 백엔드는 payload.itemId 를 읽는다.
+  //   vote:close  — '투표 마감' → 10초 카운트다운 시작(closing). 서버가 closeAt 을 전원에 broadcast.
+  //   vote:cancel — 카운트다운 취소 → 다시 open.
+  //   vote:finalize — 카운트다운 0초에 호스트 클라이언트가 호출 → 실제 마감(결과).
+  startVote: (socket: Socket) => socket.emit('vote:start'),
   castVote: (socket: Socket, itemId: string) =>
     socket.emit('vote:cast', { itemId }),
   closeVote: (socket: Socket) => socket.emit('vote:close'),
+  cancelVoteClose: (socket: Socket) => socket.emit('vote:cancel'),
+  finalizeVote: (socket: Socket) => socket.emit('vote:finalize'),
 
   // 사다리 (host) — 서버가 구조를 만들어 ladder:built 로 전원 broadcast.
   //   build 는 칸마다 상단(이름)·하단(당첨항목)을 함께 보낸다(칸 수 = 두 배열 길이, 서로 같아야 함).

@@ -47,6 +47,8 @@ export function GameRoomPage() {
   const items = useRoomStore((s) => s.items);
   const result = useRoomStore((s) => s.result);
   const tally = useRoomStore((s) => s.tally);
+  const voteStatus = useRoomStore((s) => s.voteStatus);
+  const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
   const roomError = useRoomStore((s) => s.roomError);
   const closed = useRoomStore((s) => s.closed);
   const ladder = useRoomStore((s) => s.ladder);
@@ -61,6 +63,7 @@ export function GameRoomPage() {
   const balloon = useRoomStore((s) => s.balloon);
   const balloonRound = useRoomStore((s) => s.balloonRound);
   const rouletteDraft = useRoomStore((s) => s.rouletteDraft);
+  const orderDraft = useRoomStore((s) => s.orderDraft);
 
   const [myVote, setMyVote] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
@@ -207,6 +210,7 @@ export function GameRoomPage() {
           topLabels={ladderTopLabels}
           bottomLabels={ladderBottomLabels}
           revealed={ladderRevealed}
+          resultShown={!!ladderResult}
           draftTopLabels={ladderDraft.topLabels}
           draftBottomLabels={ladderDraft.bottomLabels}
           onBuild={() => {}}
@@ -250,19 +254,20 @@ export function GameRoomPage() {
         />
       );
     } else if (gameType === 'vote') {
-      if (items.length > 0) {
-        content = (
-          <VotePlay
-            roomId={roomId}
-            items={items}
-            tally={tally}
-            isHost={false}
-            myVote={myVote}
-            onVote={castVote}
-            onLeave={goHome}
-          />
-        );
-      }
+      // 항목이 아직 없어도 투표 화면을 띄운다 — 호스트가 준비 중 추가하는 목록을 참가자가 실시간으로 본다.
+      content = (
+        <VotePlay
+          roomId={roomId}
+          items={items}
+          tally={tally}
+          isHost={false}
+          myVote={myVote}
+          voteStatus={voteStatus}
+          voteCloseAt={voteCloseAt}
+          onVote={castVote}
+          onLeave={goHome}
+        />
+      );
     } else if (gameType === 'roulette' || !gameType) {
       content = (
         <Roulette
@@ -282,6 +287,7 @@ export function GameRoomPage() {
           items={items}
           isHost={false}
           result={result}
+          orderDraft={orderDraft}
           onFinish={() => setStatus('finished')}
           onLeave={goHome}
         />

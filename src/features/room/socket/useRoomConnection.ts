@@ -19,6 +19,7 @@ import type {
   ParticipantChangePayload,
   RoomReadyUpdatePayload,
   RoomStatePayload,
+  VoteStatePayload,
   VoteTallyEntry,
 } from '../../../shared/types/api';
 
@@ -128,10 +129,12 @@ export function useRoomConnection(
       const st = useRoomStore.getState();
       st.setResult(null);
       st.setTally([]);
+      st.setVoteState({ status: 'preparing', closeAt: null });
       st.resetLadder();
       st.resetDraw();
       st.resetBalloon();
       st.setRouletteDraft([]);
+      st.setOrderDraft('');
       st.setStatus('playing');
     };
     socket.on('game:started', startRound);
@@ -148,6 +151,7 @@ export function useRoomConnection(
       st.resetDraw();
       st.resetBalloon();
       st.setRouletteDraft([]);
+      st.setOrderDraft('');
       st.setStatus('waiting');
       st.pushNotice('방장이 게임을 취소하여 방으로 돌아왔습니다');
       // 로비 복귀를 서버에 알려(room:ready) 다음 게임 시작 게이트(전원 복귀)를 통과시킨다.
@@ -156,6 +160,10 @@ export function useRoomConnection(
     // 원판 실시간 편집 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 제외).
     socket.on('roulette:draft', (p: { labels: string[] }) => {
       useRoomStore.getState().setRouletteDraft(p.labels ?? []);
+    });
+    // 순서 정하기 항목 실시간 미리보기 — 호스트가 입력 중인 항목을 참가자가 '입력 중' 칩으로 본다.
+    socket.on('order:draft', (p: { label: string }) => {
+      useRoomStore.getState().setOrderDraft(p.label ?? '');
     });
     socket.on('game:result', (p: { result: GameResult }) => {
       const st = useRoomStore.getState();
@@ -166,6 +174,10 @@ export function useRoomConnection(
     });
     socket.on('vote:updated', (p: { tally: VoteTallyEntry[] }) => {
       useRoomStore.getState().setTally(p.tally);
+    });
+    // 투표 라이프사이클(준비/열림/마감카운트다운/마감) — 호스트 조작이 전원에게 반영된다.
+    socket.on('vote:state', (p: VoteStatePayload) => {
+      useRoomStore.getState().setVoteState(p);
     });
 
     // ── 사다리(네이버 스타일): 시작(built)·시작칸 공개(revealed)·결과 보기(result) ──
@@ -220,7 +232,10 @@ export function useRoomConnection(
       if (role === 'participant') useRoomStore.getState().setClosed(true);
     });
     socket.on('error', (e: { code: ErrorCode; message?: string }) => {
-      if (e?.code) useRoomStore.getState().setError(e.code);
+      if (!e?.code) return;
+      // 투표 라이프사이클 경합(마감 직후 투표 시도 등)은 치명적이지 않다 — 전체 에러 화면 대신 조용히 무시.
+      if (e.code === 'VOTE_NOT_OPEN' || e.code === 'VOTE_NO_VOTES') return;
+      useRoomStore.getState().setError(e.code);
     });
 
     return () => {

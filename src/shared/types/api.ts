@@ -32,6 +32,8 @@ export type ErrorCode =
   | 'ROOM_LOCKED'
   | 'PLAYERS_NOT_READY'
   | 'WRONG_PASSWORD'
+  | 'VOTE_NOT_OPEN'
+  | 'VOTE_NO_VOTES'
   | 'VALIDATION_ERROR';
 
 /** REST 공통 응답 봉투 */
@@ -109,6 +111,9 @@ export interface RoomStatePayload {
   balloon: BalloonState | null;
   // 다음 게임을 위해 로비로 돌아온 참가자 닉네임들. 호스트는 현재 참가자 전원이 여기 있어야 새 게임을 시작할 수 있다.
   ready: string[];
+  // 투표 라이프사이클 — 재접속·늦은 입장이 현재 단계·카운트다운을 복원한다.
+  voteStatus: VoteStatus;
+  voteCloseAt: number | null;
 }
 
 /** `room:readyUpdate` — 로비로 돌아온 참가자 목록이 바뀔 때마다(입장·복귀·퇴장). 호스트 UI 가 시작 버튼을 연다. */
@@ -282,6 +287,19 @@ export interface LadderResultPayload {
 export interface VoteTallyEntry {
   item: Item;
   count: number;
+}
+
+/**
+ * 투표 라이프사이클 상태.
+ *  preparing : 항목 준비 중(투표 불가) · open : 투표 시작(투표 가능)
+ *  closing   : 마감 카운트다운 중(취소·재마감 가능) · closed : 결과 확정
+ */
+export type VoteStatus = 'preparing' | 'open' | 'closing' | 'closed';
+
+/** `vote:state` — 투표 상태 변경 broadcast. closeAt(마감 시각 epoch ms)은 closing 일 때만. */
+export interface VoteStatePayload {
+  status: VoteStatus;
+  closeAt: number | null;
 }
 
 /** 투표: 집계 + 최다 득표 */
