@@ -196,9 +196,9 @@ export function HostRoomPage() {
   // 시작 ack 를 반환해 참가자 부족(NEED_MORE_PLAYERS) 등 실패를 BalloonPlay 가 안내한다.
   // useCallback 으로 identity 를 고정한다 — BalloonPlay 의 자동시작 useEffect 가 매 렌더마다
   // 재실행돼 balloon:start 를 중복 emit 하지 않도록(socketRef 는 안정적이라 deps 비움).
-  const startBalloon = useCallback((total: number) => {
+  const startBalloon = useCallback(() => {
     const s = socketRef.current;
-    return s ? gameSocket.startBalloon(s, total) : Promise.resolve({ ok: false });
+    return s ? gameSocket.startBalloon(s) : Promise.resolve({ ok: false });
   }, [socketRef]);
   const pumpBalloon = () => {
     const s = socketRef.current;
@@ -207,6 +207,12 @@ export function HostRoomPage() {
   const passBalloon = () => {
     const s = socketRef.current;
     return s ? gameSocket.passBalloon(s) : Promise.resolve({ ok: false });
+  };
+  // 턴 60초 만료(호스트만) — BalloonPlay 의 카운트다운이 0이 되면 호출한다. deadline 을 토큰으로
+  // 보내 서버가 현재 턴과 일치할 때만 자동 펌프/넘기기를 처리한다(늦은·중복 호출은 서버가 무시).
+  const timeoutBalloon = (deadline: number) => {
+    const s = socketRef.current;
+    if (s) gameSocket.timeoutBalloon(s, deadline);
   };
 
   // ⑪ 사다리(네이버 스타일) — build(칸별 상·하단 라벨) / reveal(시작칸) / result(결과 보기).
@@ -395,6 +401,7 @@ export function HostRoomPage() {
         onStart={startBalloon}
         onPump={pumpBalloon}
         onPass={passBalloon}
+        onTimeout={timeoutBalloon}
         onReturn={() => returnToRoom()}
         onLeave={() => setConfirmReturn(true)}
       />

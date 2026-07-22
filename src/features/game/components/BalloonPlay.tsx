@@ -16,7 +16,7 @@ import { Screen, Button, TopBar, BalloonIcon } from '../../../shared/ui';
  */
 
 const MIN_PLAYERS = 2; // 게임 성립 최소 인원(호스트 포함) — 백엔드 BALLOON.MIN_PLAYERS 와 동일
-const DEFAULT_CAPACITY = 12; // 풍선 크기(백엔드 BALLOON.DEFAULT_TOTAL 와 동일) — 설정 없이 이 값으로 바로 시작
+// 총 펌프 수(풍선 크기)는 서버가 인원수 × 3 × 3 으로 자동 계산하므로 클라이언트는 크기를 정하지 않는다.
 
 type Ack = { ok: boolean; code?: string };
 
@@ -48,6 +48,7 @@ export function BalloonPlay({
   onStart,
   onPump,
   onPass,
+  onTimeout,
   onReturn,
   onLeave,
 }: {
@@ -57,9 +58,10 @@ export function BalloonPlay({
   balloon: BalloonState | null;
   round: number; // 시작 라운드 nonce — 값이 바뀌면 풍선이 다시 마운트된다
   playerCount: number; // 현재 참가자 수(호스트 제외) — 호스트 포함 2명이 되면 자동 시작
-  onStart: (total: number) => Promise<Ack>;
+  onStart: () => Promise<Ack>;
   onPump: () => Promise<Ack>;
   onPass: () => Promise<Ack>;
+  onTimeout?: (deadline: number) => void; // host 전용 — 턴 60초가 지나면 서버에 만료를 알린다(balloon:timeout)
   onReturn?: () => void; // '방으로 돌아가기' — 걸린 뒤 로비 복귀(결과 모달이 없어 여기서 제공)
   onLeave: () => void;
 }) {
@@ -83,13 +85,37 @@ export function BalloonPlay({
   const canPump = myTurn && !busy && turnPumps < maxPerTurn;
   const canPass = myTurn && !busy && turnPumps >= 1;
 
+  // ── 턴 제한시간(60초) 카운트다운 ──
+  // 서버가 준 turnDeadline(전원 공유 시각)으로 남은 초를 계산 → 모두 같은 카운트다운을 본다.
+  const deadline = balloon?.turnDeadline ?? null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!deadline || done) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [deadline, done]);
+  const secondsLeft =
+    deadline && !done ? Math.max(0, Math.ceil((deadline - now) / 1000)) : null;
+
+  // 0초 도달 → 호스트가 서버에 만료를 알린다(deadline 을 토큰으로, 이 턴에 한 번만).
+  // 서버가 자동 펌프(미펌프 시)/넘기기를 권위적으로 처리하고 결과를 broadcast 한다.
+  const timeoutFiredRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isHost || !onTimeout || !deadline || done) return;
+    if (secondsLeft !== 0) return;
+    if (timeoutFiredRef.current === deadline) return; // 이 턴(deadline)엔 이미 쐈다
+    timeoutFiredRef.current = deadline;
+    onTimeout(deadline);
+  }, [isHost, onTimeout, deadline, done, secondsLeft]);
+
   // 호스트: 설정 페이지 없이, 참가자가 모이면(호스트 포함 2명) 곧바로 게임을 시작한다.
   // useCallback 으로 identity 를 고정한 onStart 라 매 렌더마다 중복 emit 되지 않는다.
   const startingRef = useRef(false);
   useEffect(() => {
     if (!isHost || balloon || !enoughPlayers || startingRef.current) return;
     startingRef.current = true;
-    void onStart(DEFAULT_CAPACITY).then((ack) => {
+    void onStart().then((ack) => {
       startingRef.current = false;
       // GAME_RUNNING(이미 시작됨)은 곧 balloon:started 로 화면이 바뀌므로 안내하지 않는다.
       if (ack && ack.ok === false && ack.code !== 'GAME_RUNNING') {
@@ -120,7 +146,7 @@ export function BalloonPlay({
     if (busy) return;
     setBusy(true);
     setNote(null);
-    const ack = await onStart(DEFAULT_CAPACITY);
+    const ack = await onStart();
     setBusy(false);
     if (ack && ack.ok === false) setNote(startError(ack.code));
   };
@@ -211,6 +237,11 @@ export function BalloonPlay({
         {balloon && !done && (
           <p className="bp-status">
             펌프 <b>{pumps}</b> / {capacity} · 이번 턴 <b>{turnPumps}</b>/{maxPerTurn}
+            {secondsLeft !== null && (
+              <>
+                {' · '}⏱ <b>{secondsLeft}</b>초
+              </>
+            )}
           </p>
         )}
         {note && <p className="bp-note">{note}</p>}
