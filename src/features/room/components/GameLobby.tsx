@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameType } from '../../../shared/types/api';
 import { Screen, Button, TopBar, GameIcon, CrownIcon } from '../../../shared/ui';
+import { mascotFor } from '../../../shared/lib/mascot';
 
 /** 로비에서 바로 고르는 6종 게임 (호스트: 인라인 전환 / 참가자: 현재 게임 표시) */
 const GAMES: { type: GameType; label: string }[] = [
@@ -25,21 +26,6 @@ const gameLabel = (gt: GameType | null | undefined) =>
  *
  * 참가자 목록은 백엔드 계약대로 닉네임 문자열 배열(participant:joined/left · room:state).
  */
-
-const AVATAR_COLORS = [
-  '#e2726e', '#f0a94a', '#6aa9e0', '#93c563',
-  '#c58bd6', '#7ad0c0', '#f19bb6', '#8f97e0',
-];
-
-/** 닉네임 → 고정 아바타 색(간단 해시) */
-function colorFor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-
-/** 닉네임 첫 글자(한글·이모지 안전) */
-const firstChar = (name: string) => [...name][0] ?? '?';
 
 /** 로비가 비어 보이지 않게 최소로 보여줄 슬롯 수(방장 포함). 그 이상은 참가자 수만큼 늘어난다. */
 const MIN_SLOTS = 6;
@@ -182,8 +168,9 @@ export function GameLobby({
         {/* 입장한 참가자 슬롯 (새 참가자는 pop 애니메이션) */}
         {participants.map((nick) => (
           <div key={nick} className="lobby-slot is-in">
-            <span className="lobby-ava" style={{ background: colorFor(nick) }}>
-              {firstChar(nick)}
+            <span className="lobby-ava">
+              {/* 닉네임 첫 글자 대신 닉네임 해시로 배정된 동물 마스코트(재렌더에도 동일). */}
+              <img className="lobby-ava-img" src={mascotFor(nick)} alt="" aria-hidden="true" />
             </span>
             <span className="lobby-name">{nick}</span>
             {me && nick === me ? (
