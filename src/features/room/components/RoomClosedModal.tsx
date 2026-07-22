@@ -1,4 +1,4 @@
-import { Button } from '../../../shared/ui';
+import { Button, TrashIcon } from '../../../shared/ui';
 
 /**
  * 호스트(어드민)가 방을 삭제해 메인 화면으로 돌아온 참가자에게 뜨는 알림 모달.
@@ -8,7 +8,9 @@ export function RoomClosedModal({ onConfirm }: { onConfirm: () => void }) {
   return (
     <div className="modal-backdrop">
       <div className="modal-card" style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 40, margin: '4px 0 8px' }}>🗑️</p>
+        <div style={{ margin: '4px 0 8px' }}>
+          <TrashIcon size={44} />
+        </div>
         <p className="title center" style={{ fontSize: 20, marginTop: 0 }}>
           어드민이 방을 삭제했습니다
         </p>

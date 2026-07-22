@@ -17,4 +17,6 @@ export {
   SoundOnIcon,
   SoundOffIcon,
   LockIcon,
+  TrophyIcon,
+  TrashIcon,
 } from './icons';

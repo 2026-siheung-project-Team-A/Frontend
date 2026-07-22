@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Item } from '../../../shared/types/api';
-import { Screen, Button, TopBar } from '../../../shared/ui';
+import { Screen, Button, TopBar, TrophyIcon } from '../../../shared/ui';
 
 /** 원판 슬라이스 파스텔 색 (최대 8칸) */
 const SLICE_COLORS = [
@@ -15,7 +15,8 @@ const MAX = 12;
  * 원판의 각 칸을 눌러 항목을 직접 입력한다. 항목은 로컬 draft(slots)로 다루다가
  * "돌리기"를 누르는 순간 서버 items로 동기화(기존 제거 → 순차 추가)하고 game:start 한다.
  *   - onSpinLabels(labels): 부모가 서버 동기화 + game:start 를 수행.
- *   - winner 도착 → 그 칸으로 회전 → onFinish 로 결과 모달을 부모가 띄운다.
+ *   - winner 도착 → 그 칸으로 회전 → 원판이 멈추면 윗단에 '당첨!' 배너를 보여주고(모달 아님)
+ *     하단에 '방으로 돌아가기' 버튼(onReturn)이 뜬다.
  * 참가자는 편집 없이 원판을 보되, "돌리기" 전(items 아직 없음)엔 draftLabels(호스트가
  * 타이핑 중인 라벨의 실시간 미리보기, roulette:draft)로, 확정 후엔 서버 items 로 그린다.
  * 호스트 쪽은 slots 가 바뀔 때마다 onDraftChange 로 그 미리보기를 참가자에게 실시간 전송한다.
@@ -28,6 +29,8 @@ export function Roulette({
   onSpinLabels,
   onDraftChange,
   onFinish,
+  onReturn,
+  returnCountdown,
   onLeave,
 }: {
   items: Item[];
@@ -39,6 +42,10 @@ export function Roulette({
   /** 호스트용 — 셋업 중 slots 가 바뀔 때마다(디바운스) 호출, 참가자에게 실시간 전송용. */
   onDraftChange?: (labels: string[]) => void;
   onFinish?: () => void;
+  /** 원판이 멈춘 뒤 하단 '방으로 돌아가기' 버튼 — 라운드를 접고 로비로. */
+  onReturn?: () => void;
+  /** 참가자용 — '방으로 돌아가기' 버튼에 남은 초(자동강퇴 카운트다운). 있으면 버튼에 표시. */
+  returnCountdown?: number;
   onLeave?: () => void;
 }) {
   const [slots, setSlots] = useState<string[]>(() => {
@@ -49,6 +56,8 @@ export function Roulette({
   const [phase, setPhase] = useState<'setup' | 'spin'>(isHost ? 'setup' : 'spin');
   const [spinLabels, setSpinLabels] = useState<string[] | null>(null);
   const [rotation, setRotation] = useState(0);
+  // 원판이 멈춰 당첨이 확정된 상태(윗단 '당첨!' 배너·하단 '방으로 돌아가기' 버튼 표시).
+  const [landed, setLanded] = useState(false);
   const finishedRef = useRef(false);
   const spunFor = useRef<string | null>(null);
 
@@ -76,8 +85,14 @@ export function Roulette({
   function done() {
     if (finishedRef.current) return;
     finishedRef.current = true;
+    setLanded(true); // 윗단 '당첨!' 배너 + 하단 '방으로 돌아가기' 노출
     onFinish?.();
   }
+
+  // 새 라운드/로비 복귀로 winner 가 비면 당첨 표시를 내린다(재사용 시 옛 결과가 남지 않게).
+  useEffect(() => {
+    if (!winner) setLanded(false);
+  }, [winner]);
 
   // 확정 winner 도착 → 그 칸 중앙으로 회전 (진행 단계에서만).
   // 호스트는 라벨로, 참가자는 서버 id로 당첨 칸을 찾는다.
@@ -182,7 +197,14 @@ export function Roulette({
   return (
     <Screen
       footer={
-        editable ? (
+        landed && winner && onReturn ? (
+          <Button block onClick={onReturn}>
+            방으로 돌아가기
+            {typeof returnCountdown === 'number' && (
+              <span className="rm-count"> ({returnCountdown})</span>
+            )}
+          </Button>
+        ) : editable ? (
           <Button block onClick={spin} disabled={filledCount < MIN}>
             돌리기
           </Button>
@@ -190,6 +212,16 @@ export function Roulette({
       }
     >
       <TopBar title="원판 돌리기" onBack={isHost ? onLeave : undefined} />
+
+      {/* 결과 — 모달 대신 원판 윗단에 '당첨!' 배너로 보여준다. */}
+      {landed && winner && (
+        <div className="rw-result" role="status">
+          <span className="rw-result-badge">
+            <TrophyIcon size={18} /> 당첨!
+          </span>
+          <b className="rw-result-name">{winner.label}</b>
+        </div>
+      )}
       {editable && (
         <div className="rw-count">
           <span>옵션 개수</span>
@@ -220,17 +252,20 @@ export function Roulette({
           </p>
         )}
         {wheel}
-        <p className={`rw-status${editable ? '' : ' muted'}`} key="status">
-          {editable ? (
-            <>
-              <b>{filledCount}개 입력중</b> / 총 {slots.length}개
-            </>
-          ) : isHost ? (
-            '돌리는 중…'
-          ) : (
-            '호스트가 돌리면 결과가 떠요'
-          )}
-        </p>
+        {/* 당첨이 확정되면(landed) 결과 배너가 위에 있으므로 이 안내 줄은 숨긴다. */}
+        {!landed && (
+          <p className={`rw-status${editable ? '' : ' muted'}`} key="status">
+            {editable ? (
+              <>
+                <b>{filledCount}개 입력중</b> / 총 {slots.length}개
+              </>
+            ) : isHost ? (
+              '돌리는 중…'
+            ) : (
+              '호스트가 돌리면 결과가 떠요'
+            )}
+          </p>
+        )}
       </div>
     </Screen>
   );
