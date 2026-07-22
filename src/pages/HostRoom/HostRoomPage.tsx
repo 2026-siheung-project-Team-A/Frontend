@@ -133,6 +133,16 @@ export function HostRoomPage() {
       st.setItems(st.items.filter((it) => it.id !== id)); // offline
     }
   };
+  // 항목 내용 수정 — id 는 유지하고 label 만 바꾼다(순서·투표 집계 보존).
+  const editItem = (id: string, label: string) => {
+    const s = socketRef.current;
+    if (connected && s) {
+      gameSocket.editItem(s, id, label); // 서버 → item:updated → store.items
+    } else {
+      const st = useRoomStore.getState();
+      st.setItems(st.items.map((it) => (it.id === id ? { ...it, label } : it))); // offline
+    }
+  };
 
   const activeResult = storeResult ?? localResult;
   const rouletteWinner =
@@ -335,6 +345,7 @@ export function HostRoomPage() {
         onFinalize={finalizeVote}
         onAddItem={addItem}
         onRemoveItem={removeItem}
+        onEditItem={editItem}
         onLeave={() => setConfirmReturn(true)}
       />
     );
@@ -420,6 +431,7 @@ export function HostRoomPage() {
         onFinish={finishPlay}
         onAddItem={addItem}
         onRemoveItem={removeItem}
+        onEditItem={editItem}
         onDraftChange={sendOrderDraft}
         onLeave={() => setConfirmReturn(true)}
       />

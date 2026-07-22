@@ -27,11 +27,25 @@ import type { CreateRoomInput, GameType } from '../../shared/types/api';
 // 6종 힌트 줄에 쓰는 게임 순서(와이어프레임과 동일).
 const HINT_GAMES: GameType[] = ['roulette', 'vote', 'draw', 'order', 'balloon', 'ladder'];
 
+// 각 게임의 이름 + 한 줄 설명 — 홈 화면 아이콘을 호버/클릭하면 그 아래에 보여준다.
+const GAME_INFO: Record<GameType, { label: string; desc: string }> = {
+  roulette: { label: '룰렛', desc: '원판을 돌려 당첨 하나를 뽑아요' },
+  vote: { label: '투표하기', desc: '다 같이 투표해서 최다 득표를 정해요' },
+  draw: { label: '제비뽑기', desc: '제비를 뽑아 꽝을 피해요' },
+  order: { label: '순서 정하기', desc: '항목을 무작위 순서로 줄 세워요' },
+  balloon: { label: '풍선 터뜨리기', desc: '돌아가며 펌프하다 터뜨린 사람이 걸려요' },
+  ladder: { label: '사다리타기', desc: '사다리를 타고 내려가 짝을 정해요' },
+};
+
 export function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [code, setCode] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  // 홈 게임 아이콘 설명 — 호버(hoverGame)가 우선, 클릭으로 고정(pinnedGame). 둘 다 없으면 안내 문구.
+  const [hoverGame, setHoverGame] = useState<GameType | null>(null);
+  const [pinnedGame, setPinnedGame] = useState<GameType | null>(null);
+  const shownGame = hoverGame ?? pinnedGame;
   // 호스트가 방을 삭제해 메인으로 튕겨온 참가자에게 알림 모달을 띄운다.
   // 이 신호는 참가자 화면(GameRoomPage)이 navigate state 로만 넘긴다 — 호스트(/host)는 이 경로가
   // 없어 스스로 방을 삭제해도 이 모달이 절대 뜨지 않는다.
@@ -67,7 +81,7 @@ export function HomePage() {
   return (
     <>
       <Screen>
-        <p className="brand">Pick Me Up</p>
+        <p className="brand">Pick Me Now</p>
 
         <div className="home-headline">
           <h1 className="title">오늘 뭐 정할까요?</h1>
@@ -85,14 +99,36 @@ export function HomePage() {
           <span className="home-verb">돌리고 · 뽑고 · 터뜨려서 정해요</span>
         </div>
 
-        {/* 이 6가지로 정할 수 있어요 — 얇은 힌트 줄 */}
+        {/* 현재 총 6가지의 게임 — 아이콘을 호버/클릭하면 아래에 간략한 설명이 뜬다. */}
         <div className="home-hint">
-          <p className="home-hint-cap">이 6가지로 정할 수 있어요</p>
+          <p className="home-hint-cap">현재 총 6가지의 게임이 있어요</p>
           <div className="home-hint-icons">
             {HINT_GAMES.map((g) => (
-              <GameIcon key={g} type={g} size={22} />
+              <button
+                key={g}
+                type="button"
+                className={`home-hint-icon${pinnedGame === g ? ' is-on' : ''}`}
+                onMouseEnter={() => setHoverGame(g)}
+                onMouseLeave={() => setHoverGame(null)}
+                onFocus={() => setHoverGame(g)}
+                onBlur={() => setHoverGame(null)}
+                onClick={() => setPinnedGame((cur) => (cur === g ? null : g))}
+                aria-label={GAME_INFO[g].label}
+                aria-pressed={pinnedGame === g}
+              >
+                <GameIcon type={g} size={22} />
+              </button>
             ))}
           </div>
+          <p className="home-hint-desc">
+            {shownGame ? (
+              <>
+                <b>{GAME_INFO[shownGame].label}</b> · {GAME_INFO[shownGame].desc}
+              </>
+            ) : (
+              <span className="muted">아이콘을 누르면 설명이 나와요</span>
+            )}
+          </p>
         </div>
 
         <div className="spacer" />

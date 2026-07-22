@@ -57,7 +57,6 @@ function Jebi({ index }: { index: number }) {
 type PickAck = { ok: boolean; code?: string };
 
 export function DrawPlay({
-  roomId,
   isHost,
   me,
   draw,
@@ -272,7 +271,7 @@ export function DrawPlay({
 
   return (
     <Screen footer={footer}>
-      <TopBar title="제비뽑기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="제비뽑기" onBack={isHost ? onLeave : undefined} />
 
       {controls}
 

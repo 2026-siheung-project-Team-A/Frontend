@@ -17,7 +17,6 @@ const secondsUntil = (closeAt: number | null): number =>
   closeAt == null ? 0 : Math.max(0, Math.ceil((closeAt - Date.now()) / 1000));
 
 export function VotePlay({
-  roomId,
   items,
   tally,
   isHost,
@@ -32,6 +31,7 @@ export function VotePlay({
   onLeave,
   onAddItem,
   onRemoveItem,
+  onEditItem,
 }: {
   roomId: string;
   items: Item[];
@@ -46,9 +46,10 @@ export function VotePlay({
   onCancelClose?: () => void; // host — 카운트다운 취소(다시 open)
   onFinalize?: () => void; // host — 카운트다운 0초에 실제 마감
   onLeave?: () => void;
-  /** 호스트 전용 — 준비 단계에서 항목을 추가/삭제한다. */
+  /** 호스트 전용 — 준비 단계에서 항목을 추가/삭제/수정한다. */
   onAddItem?: (label: string) => void;
   onRemoveItem?: (id: string) => void;
+  onEditItem?: (id: string, label: string) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(myVote ?? null);
   const [secondsLeft, setSecondsLeft] = useState(() => secondsUntil(voteCloseAt));
@@ -132,12 +133,12 @@ export function VotePlay({
 
   return (
     <Screen footer={footer}>
-      <TopBar title="투표하기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="투표하기" onBack={isHost ? onLeave : undefined} />
       <p className="subtitle" style={{ marginTop: -8 }}>{subtitle}</p>
 
       {/* 준비 단계: 호스트만 항목 편집(참가자는 목록만 실시간으로 본다) */}
       {isHost && voteStatus === 'preparing' && onAddItem && onRemoveItem && (
-        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} />
+        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} onEdit={onEditItem} />
       )}
 
       {/* 마감 카운트다운 — 전원에게 보인다 */}

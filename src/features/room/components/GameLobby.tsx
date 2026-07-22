@@ -122,7 +122,6 @@ export function GameLobby({
       <TopBar
         title={title?.trim() ? title : '게임 대기방'}
         onBack={() => setConfirmLeave(true)}
-        trailing={<span className="chip">#{roomId}</span>}
       />
 
       <div className="lobby-head">

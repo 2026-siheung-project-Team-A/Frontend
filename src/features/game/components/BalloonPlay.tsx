@@ -39,7 +39,6 @@ function actionError(code?: string): string {
 }
 
 export function BalloonPlay({
-  roomId,
   isHost,
   me,
   balloon,
@@ -67,6 +66,8 @@ export function BalloonPlay({
 }) {
   const [busy, setBusy] = useState(false); // 시작·펌프·넘기기 요청 중복 방지
   const [note, setNote] = useState<string | null>(null);
+  // 풍선이 터진 직후 1.5초 동안 '방으로 돌아가기' 버튼을 잠근다(펑! 결과를 잠깐 보게 한다).
+  const [returnLocked, setReturnLocked] = useState(false);
 
   const caught = balloon?.caughtBy ?? null;
   const done = !!caught;
@@ -124,6 +125,17 @@ export function BalloonPlay({
     });
   }, [isHost, balloon, enoughPlayers, onStart]);
 
+  // 풍선이 터지면(done) '방으로 돌아가기'를 1.5초간 잠갔다가 자동으로 푼다.
+  useEffect(() => {
+    if (!done) {
+      setReturnLocked(false);
+      return;
+    }
+    setReturnLocked(true);
+    const t = setTimeout(() => setReturnLocked(false), 1500);
+    return () => clearTimeout(t);
+  }, [done]);
+
   const pump = async () => {
     if (!canPump) return;
     setBusy(true);
@@ -170,11 +182,11 @@ export function BalloonPlay({
   const footer = !balloon ? undefined : done ? (
     isHost ? (
       <div className="grid-2">
-        <Button variant="secondary" onClick={onReturn}>방으로 돌아가기</Button>
+        <Button variant="secondary" onClick={onReturn} disabled={returnLocked}>방으로 돌아가기</Button>
         <Button onClick={restart} disabled={busy}>다시 하기</Button>
       </div>
     ) : (
-      <Button block onClick={onReturn}>방으로 돌아가기</Button>
+      <Button block onClick={onReturn} disabled={returnLocked}>방으로 돌아가기</Button>
     )
   ) : myTurn ? (
     <div className="grid-2">
@@ -189,7 +201,7 @@ export function BalloonPlay({
 
   return (
     <Screen footer={footer}>
-      <TopBar title="풍선 터뜨리기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="풍선 터뜨리기" onBack={isHost ? onLeave : undefined} />
 
       <div className="bp-panel">
         <p className="bp-headline">{headline}</p>

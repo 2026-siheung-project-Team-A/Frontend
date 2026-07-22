@@ -156,7 +156,7 @@ export function Ladder({
     const n = Math.max(dt.length, db.length);
     return (
       <Screen>
-        <TopBar title="사다리타기" onBack={undefined} trailing={<span className="chip">#{roomId}</span>} />
+        <TopBar title="사다리타기" onBack={undefined} />
         <p className="subtitle" style={{ marginTop: -8 }}>호스트가 목록을 정하고 있어요…</p>
         {n === 0 ? (
           <p className="center muted" style={{ marginTop: 40 }}>
@@ -212,7 +212,7 @@ export function Ladder({
         </div>
       }
     >
-      <TopBar title="사다리타기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="사다리타기" onBack={isHost ? onLeave : undefined} />
       <p className="subtitle" style={{ marginTop: -8 }}>이름과 당첨 항목을 적어주세요.</p>
 
       <div className="lg-count">
@@ -265,7 +265,6 @@ export function Ladder({
 
 /** 진행 화면 — 서버 구조로 사다리를 그리고, 공개된 시작칸의 내려오는 경로를 애니메이션한다. */
 function PlayBoard({
-  roomId,
   isHost,
   ladder,
   topLabels,
@@ -323,7 +322,7 @@ function PlayBoard({
         ) : undefined
       }
     >
-      <TopBar title="사다리타기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="사다리타기" onBack={isHost ? onLeave : undefined} />
       <p className="subtitle" style={{ marginTop: -8 }}>
         {isHost ? '위 시작점을 누르면 사다리를 타고 내려가요.' : '호스트가 시작점을 누르면 결과가 보여요.'}
       </p>

@@ -17,7 +17,7 @@ export function SoundToggle() {
       aria-pressed={muted}
       title={muted ? '효과음 켜기' : '효과음 끄기'}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         top: 'max(12px, env(safe-area-inset-top))',
         right: '12px',
         zIndex: 50,

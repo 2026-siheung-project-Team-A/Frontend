@@ -115,6 +115,7 @@ export function useRoomConnection(
     const onItems = (p: { items: Item[] }) =>
       useRoomStore.getState().setItems(p.items);
     socket.on('item:added', onItems);
+    socket.on('item:updated', onItems);
     socket.on('item:removed', onItems);
     socket.on('item:reordered', onItems);
 
@@ -139,7 +140,13 @@ export function useRoomConnection(
     };
     socket.on('game:started', startRound);
     // '게임 시작 ▶' — 결과 전이지만 참가자도 곧장 게임 화면으로(대기 화면 탈출).
-    socket.on('game:begin', startRound);
+    // 서버가 준 startAt 으로 전원이 같은 3·2·1 카운트다운을 함께 본다(게임 화면 위 오버레이).
+    socket.on('game:begin', (p?: { gameType?: RoomStatePayload['gameType']; startAt?: number }) => {
+      startRound();
+      if (typeof p?.startAt === 'number') {
+        useRoomStore.getState().setCountdownStartAt(p.startAt);
+      }
+    });
     // 호스트가 게임을 취소하고 로비로 돌아감 — 참가자 전원을 로비로 되돌리고 안내 토스트를 띄운다.
     // (호스트 소켓은 이 이벤트를 받지 않는다 — 서버가 발신자를 제외하고 broadcast 한다.)
     socket.on('game:cancelled', () => {
@@ -152,6 +159,7 @@ export function useRoomConnection(
       st.resetBalloon();
       st.setRouletteDraft([]);
       st.setOrderDraft('');
+      st.setCountdownStartAt(null); // 카운트다운 중 취소되면 오버레이도 즉시 내린다.
       st.setStatus('waiting');
       st.pushNotice('방장이 게임을 취소하여 방으로 돌아왔습니다');
       // 로비 복귀를 서버에 알려(room:ready) 다음 게임 시작 게이트(전원 복귀)를 통과시킨다.

@@ -20,6 +20,9 @@ export const gameSocket = {
     new Promise<{ ok: boolean }>((resolve) => {
       socket.emit('item:remove', { itemId }, (ack: { ok: boolean }) => resolve(ack));
     }),
+  /** 항목 내용 수정 (host) — id 를 유지한 채 label 만 바꾼다. 서버가 item:updated 로 전원에 반영. */
+  editItem: (socket: Socket, itemId: string, label: string) =>
+    socket.emit('item:update', { itemId, label }),
   reorderItems: (socket: Socket, order: string[]) =>
     socket.emit('item:reorder', { order }),
 
