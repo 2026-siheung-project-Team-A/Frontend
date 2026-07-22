@@ -30,6 +30,7 @@ export type ErrorCode =
   | 'PUMP_LIMIT'
   | 'PUMP_FIRST'
   | 'ROOM_LOCKED'
+  | 'ROOM_NOT_STARTED'
   | 'PLAYERS_NOT_READY'
   | 'WRONG_PASSWORD'
   | 'VOTE_NOT_OPEN'
@@ -50,6 +51,10 @@ export interface CreateRoomInput {
   /** 비밀방 여부. true 면 password(숫자 최대 6자리) 필수. */
   isSecret?: boolean;
   password?: string;
+  /** 방 유효기간 시작(ISO 8601). 이 시각부터 참가자 입장 가능. 없으면 즉시. */
+  startAt?: string;
+  /** 방 유효기간 종료(ISO 8601). 이 시각이 지나면 방이 사라진다. 시작~종료 최대 7일. */
+  endAt?: string;
 }
 
 /** POST /api/rooms 응답 */
@@ -67,6 +72,8 @@ export interface RoomSummary {
   gameType: GameType | null;
   participantCount: number;
   isSecret: boolean; // 비밀방이면 입장 시 비밀번호 필요(입력칸 노출)
+  startAt: number; // 유효기간 시작(epoch ms). now 보다 크면 아직 시작 전 → 입장 불가. 0=즉시.
+  endAt: number; // 유효기간 종료(epoch ms). 0=미설정(레거시).
 }
 
 /** GET /api/stats 응답 */
@@ -96,6 +103,8 @@ export interface RoomStatePayload {
   status: RoomStatus;
   gameType: GameType | null;
   isSecret: boolean; // 비밀방 여부(자물쇠 표시용). 비밀번호는 포함되지 않는다.
+  startAt: number; // 유효기간 시작(epoch ms). 0=즉시(레거시).
+  endAt: number; // 유효기간 종료(epoch ms). 이 시각이 지나면 방이 사라진다. 0=미설정(레거시).
   items: Item[];
   participants: string[]; // 닉네임 목록
   participantCount: number;
@@ -207,6 +216,7 @@ export interface BalloonState {
   maxPerTurn: number; // 한 턴에 펌프할 수 있는 최대 횟수
   turnOrder: string[]; // 턴 순서(호스트 포함, '호스트' 로 표기)
   turn: string | null; // 현재 턴(걸린 뒤 null). 호스트 차례면 '호스트'
+  turnDeadline: number | null; // 현재 턴 제한시각(epoch ms) — 60초 카운트다운. 걸린 뒤엔 null.
   caughtBy: string | null; // 풍선을 터뜨려 걸린 참가자(진행 중이면 null)
 }
 
@@ -216,6 +226,7 @@ export interface BalloonStartedPayload {
   turnOrder: string[]; // 호스트 포함
   turn: string; // 첫 턴
   maxPerTurn: number;
+  turnDeadline: number; // 첫 턴 제한시각(epoch ms)
 }
 
 /** `balloon:pumped` — 현재 턴 참가자가 풍선을 한 번 펌프할 때마다(턴은 유지된다). */
@@ -224,6 +235,7 @@ export interface BalloonPumpedPayload {
   pumps: number; // 갱신된 누적 펌프 수
   turnPumps: number; // 갱신된 이번 턴 펌프 수
   turn: string | null; // 유지되는 현재 턴 — 걸렸으면 null
+  turnDeadline: number | null; // 현재 턴 제한시각(턴이 바뀌면 새 값) — 걸렸으면 null
   caughtBy: string | null; // 이 펌프로 터져 걸렸으면 그 사람, 아니면 null
   burst: boolean; // 이 펌프로 풍선이 터졌는지
 }
@@ -232,6 +244,7 @@ export interface BalloonPumpedPayload {
 export interface BalloonPassedPayload {
   by: string; // 넘긴 사람('호스트' 포함)
   turn: string; // 다음 턴 참가자
+  turnDeadline: number; // 새 턴 제한시각(epoch ms)
 }
 
 // ---------------------------------------------------------------------------

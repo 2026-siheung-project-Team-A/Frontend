@@ -124,14 +124,12 @@ export const gameSocket = {
   /**
    * 풍선 게임 시작(host) — ack 를 기다리는 Promise. 참가자가 2명 미만이면
    * {ok:false, code:'NEED_MORE_PLAYERS'} 로 거절되므로, 호출부가 이 값으로 안내를 띄운다.
-   * (예전엔 ack 없이 emit 만 해 실패해도 아무 반응이 없었다 — '작동 안 함'의 원인.)
+   * 총 펌프 수(풍선 크기)는 서버가 인원수로 자동 계산하므로 크기를 보내지 않는다.
    */
-  startBalloon: (socket: Socket, total: number) =>
+  startBalloon: (socket: Socket) =>
     new Promise<{ ok: boolean; code?: string }>((resolve) => {
-      socket.emit(
-        'balloon:start',
-        { total },
-        (ack: { ok: boolean; code?: string }) => resolve(ack),
+      socket.emit('balloon:start', {}, (ack: { ok: boolean; code?: string }) =>
+        resolve(ack),
       );
     }),
   /**
@@ -155,6 +153,12 @@ export const gameSocket = {
         resolve(ack),
       );
     }),
+  /**
+   * 턴 60초 만료(host 전용) — 카운트다운이 0이 되면 호출한다. 서버가 자동 펌프(미펌프 시) 후
+   * 다음 사람으로 넘기거나 그냥 넘기고, 결과를 balloon:pumped/passed 로 broadcast 한다(멱등).
+   */
+  timeoutBalloon: (socket: Socket, deadline: number) =>
+    socket.emit('balloon:timeout', { deadline }),
   // 서버→클라 구독은 useRoomConnection이 단독 소유한다(store에 반영). 여기에 socket.on() 헬퍼를
   // 두면 같은 이벤트에 리스너가 중복 등록되므로, 새 서버 이벤트 구독은 useRoomConnection에 추가할 것.
 };

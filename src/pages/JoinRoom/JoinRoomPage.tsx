@@ -1,12 +1,35 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
 import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
+import type { ErrorCode } from '../../shared/types/api';
 import { Screen, Button, Loading, ErrorView, GoHomeButton, LockIcon } from '../../shared/ui';
 
 const PIN_MAX = 6;
+
+/**
+ * 입장(room:join)이 실패해 이 화면으로 되돌아왔을 때, 폼 위에 바로 보여줄 문구.
+ * 별도 에러 페이지로 튕기지 않고 여기서 고쳐 다시 넣게 한다(닉네임 중복·비밀번호·정원).
+ */
+const JOIN_ERROR_MESSAGE: Partial<Record<ErrorCode, string>> = {
+  NICKNAME_TAKEN: '현재 방에서 이미 사용 중인 닉네임이에요. 다른 닉네임으로 입력해 주세요.',
+  WRONG_PASSWORD: '비밀번호가 맞지 않아요. 다시 확인해 주세요.',
+  ROOM_FULL: '방이 가득 차 지금은 입장할 수 없어요.',
+  ROOM_NOT_STARTED: '아직 방이 열리지 않았어요. 시작 시각 이후에 다시 입장해 주세요.',
+};
+
+/** epoch ms → "M월 D일 오전/오후 H시" 로컬 표기. */
+function formatStart(ms: number): string {
+  const d = new Date(ms);
+  return d.toLocaleString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 /**
  * ⑤ 참가자 · 입장 — QR/코드로 진입해 닉네임(비밀방이면 비밀번호까지)을 넣고 들어간다.
@@ -21,11 +44,21 @@ const PIN_MAX = 6;
 export function JoinRoomPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   // WRONG_PASSWORD 로 되돌아온 경우 이미 알고 있는 닉네임을 미리 채워, 비밀번호만 다시 치게 한다.
   const [nickname, setName] = useState(
     () => useRoomStore.getState().nickname ?? '',
   );
   const [pin, setPin] = useState('');
+  // 입장 실패로 되돌아왔으면(GameRoom → navigate state) 그 코드를 폼 위에 인라인으로 알린다.
+  const [joinError, setJoinError] = useState<ErrorCode | null>(
+    () => (location.state as { joinError?: ErrorCode } | null)?.joinError ?? null,
+  );
+
+  // 되돌아오며 남았을 수 있는 store 의 전역 에러를 비운다(이 화면은 인라인으로만 알린다).
+  useEffect(() => {
+    useRoomStore.getState().setError(null);
+  }, []);
 
   // 비밀방 여부 확인용 방 조회. isSecret 을 확정하기 전엔 입장을 막는다.
   const {
@@ -72,11 +105,20 @@ export function JoinRoomPage() {
 
   const isSecret = summary?.isSecret ?? false;
   const pinOk = !isSecret || (pin.length >= 1 && pin.length <= PIN_MAX);
-  const canJoin = !!nickname.trim() && pinOk;
+  // 방 유효기간 시작 전이면(startAt 이 미래) 아직 입장할 수 없다. startAt=0 은 즉시(레거시).
+  const startAt = summary?.startAt ?? 0;
+  const notStarted = startAt > Date.now();
+  const canJoin = !!nickname.trim() && pinOk && !notStarted;
+
+  // 어느 칸에 인라인 안내를 붙일지 — 닉네임 중복은 닉네임 칸, 비밀번호 오류는 비밀번호 칸, 정원 초과는 상단 배너.
+  const nickError = joinError === 'NICKNAME_TAKEN';
+  const pwError = joinError === 'WRONG_PASSWORD';
+  const bannerError = joinError === 'ROOM_FULL' ? JOIN_ERROR_MESSAGE.ROOM_FULL : null;
 
   const join = () => {
     const nick = nickname.trim();
-    if (!nick || !pinOk) return;
+    if (!nick || !pinOk || notStarted) return;
+    setJoinError(null); // 다시 시도하는 순간 이전 안내는 지운다.
     // 이전 방의 잔여 상태를 비우고 닉네임·(비밀방이면)비밀번호·role만 저장하고 이동. 실제 소켓 연결·
     // room:join emit 은 GameRoom 의 useRoomConnection(role:'participant')이 connect 시 자동 처리한다.
     const st = useRoomStore.getState();
@@ -97,6 +139,16 @@ export function JoinRoomPage() {
     >
       <h1 className="title" style={{ fontSize: 24 }}>참여하기</h1>
 
+      {bannerError && (
+        <p className="join-error-banner" role="alert">{bannerError}</p>
+      )}
+
+      {notStarted && (
+        <p className="join-error-banner" role="status">
+          아직 방이 열리지 않았어요. <b>{formatStart(startAt)}</b>부터 입장할 수 있어요.
+        </p>
+      )}
+
       <div className="field" style={{ marginTop: 28 }}>
         <label className="section-label">방 코드</label>
         <input className="input" value={`#${roomId}`} readOnly />
@@ -105,14 +157,20 @@ export function JoinRoomPage() {
       <div className="field" style={{ marginTop: 20 }}>
         <label className="section-label">닉네임</label>
         <input
-          className="input"
+          className={`input${nickError ? ' is-error' : ''}`}
           placeholder="닉네임을 입력하세요"
           value={nickname}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (nickError) setJoinError(null); // 고치기 시작하면 안내를 지운다.
+          }}
           onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && join()}
           maxLength={12}
-          autoFocus={!nickname}
+          autoFocus={!nickname || nickError}
         />
+        {nickError && (
+          <p className="field-error">{JOIN_ERROR_MESSAGE.NICKNAME_TAKEN}</p>
+        )}
       </div>
 
       {isSecret && (
@@ -123,19 +181,26 @@ export function JoinRoomPage() {
             </span>
           </label>
           <input
-            className="input"
+            className={`input${pwError ? ' is-error' : ''}`}
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="off"
             placeholder={`숫자 최대 ${PIN_MAX}자리`}
             value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_MAX))}
+            onChange={(e) => {
+              setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_MAX));
+              if (pwError) setJoinError(null);
+            }}
             onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && join()}
-            autoFocus={!!nickname}
+            autoFocus={!!nickname && !nickError}
           />
-          <p className="muted" style={{ fontSize: 13 }}>
-            이 방은 비밀방이에요. 호스트에게 받은 비밀번호를 입력해 주세요.
-          </p>
+          {pwError ? (
+            <p className="field-error">{JOIN_ERROR_MESSAGE.WRONG_PASSWORD}</p>
+          ) : (
+            <p className="muted" style={{ fontSize: 13 }}>
+              이 방은 비밀방이에요. 호스트에게 받은 비밀번호를 입력해 주세요.
+            </p>
+          )}
         </div>
       )}
 

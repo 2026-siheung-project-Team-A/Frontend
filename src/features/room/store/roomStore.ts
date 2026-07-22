@@ -277,12 +277,13 @@ export const useRoomStore = create<RoomState>((set) => ({
         maxPerTurn: payload.maxPerTurn,
         turnOrder: payload.turnOrder,
         turn: payload.turn,
+        turnDeadline: payload.turnDeadline,
         caughtBy: null,
       },
       balloonRound: s.balloonRound + 1,
       status: 'playing',
     })),
-  // 풍선 한 번 펌프 — 누적/이번 턴 펌프 수·턴·걸린 사람을 서버 값으로 갱신. balloon 없으면 무시.
+  // 풍선 한 번 펌프 — 누적/이번 턴 펌프 수·턴·제한시각·걸린 사람을 서버 값으로 갱신. balloon 없으면 무시.
   applyBalloonPumped: (payload) =>
     set((s) => {
       if (!s.balloon) return s;
@@ -294,15 +295,23 @@ export const useRoomStore = create<RoomState>((set) => ({
           pumps: payload.pumps,
           turnPumps: payload.turnPumps,
           turn: payload.turn,
+          turnDeadline: payload.turnDeadline,
           caughtBy: payload.caughtBy,
         },
       };
     }),
-  // '넘기기' — 다음 사람으로 턴이 넘어가고 그 턴의 펌프 수는 0으로 초기화. balloon 없으면 무시.
+  // '넘기기' — 다음 사람으로 턴이 넘어가고 그 턴의 펌프 수는 0·제한시각은 새 값으로. balloon 없으면 무시.
   applyBalloonPassed: (payload) =>
     set((s) =>
       s.balloon
-        ? { balloon: { ...s.balloon, turn: payload.turn, turnPumps: 0 } }
+        ? {
+            balloon: {
+              ...s.balloon,
+              turn: payload.turn,
+              turnPumps: 0,
+              turnDeadline: payload.turnDeadline,
+            },
+          }
         : s,
     ),
   resetBalloon: () => set({ balloon: null }),

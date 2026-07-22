@@ -12,12 +12,17 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
   ROOM_EXPIRED: {
     emoji: '⌛',
     title: '만료된 방이에요',
-    desc: '방은 3일 후 사라져요. 새로 만들어 주세요.',
+    desc: '방 유효기간이 지났어요. 새로 만들어 주세요.',
   },
   ROOM_FULL: {
     emoji: '🙅',
     title: '방이 가득 찼어요',
     desc: '참여 인원이 모두 찼어요.',
+  },
+  ROOM_NOT_STARTED: {
+    emoji: '⏰',
+    title: '아직 방이 열리지 않았어요',
+    desc: '방 유효기간 시작 시각 이후에 다시 입장해 주세요.',
   },
   NOT_HOST: {
     emoji: '🔒',

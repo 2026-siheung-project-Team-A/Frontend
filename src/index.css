@@ -280,6 +280,29 @@ input {
 .input::placeholder {
   color: var(--muted);
 }
+/* 입력 오류(닉네임 중복·비밀번호 오류 등) — 해당 칸을 빨갛게 표시한다. */
+.input.is-error,
+.input.is-error:focus {
+  border-color: var(--danger);
+}
+/* 칸 아래 인라인 안내 문구(별도 에러 페이지 대신 폼에서 바로 알린다). */
+.field-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* 폼 상단 배너(정원 초과처럼 특정 칸이 아닌 안내). */
+.join-error-banner {
+  margin-top: var(--sp-4);
+  padding: 10px var(--sp-4);
+  border-radius: var(--r-field);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
 
 /* -------------------------------------------------------------------------
    카드 · 리스트 · 칩
@@ -1091,6 +1114,18 @@ input {
   color: var(--danger);
   font-size: 14px;
   margin: var(--sp-3) 0 0;
+}
+/* 방 유효기간 날짜 선택 — 캡션 위, date input 아래로 세로 배치 */
+.crm-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crm-date-cap {
+  font-size: 12px;
+}
+.crm-date .input {
+  width: 100%;
 }
 
 /* 게임 화면에 얹는 항목 편집기 — 별도 페이지가 아니라 게임 비주얼 바로 위에 붙는다 */
