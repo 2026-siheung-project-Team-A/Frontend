@@ -80,6 +80,10 @@ interface RoomState {
   // 커밋된 항목은 items 로 이미 실시간 공유되고, 이 값은 '입력 중' 고스트 칩으로만 보여준다.
   orderDraft: string;
 
+  // 게임 시작 카운트다운 — 호스트가 '게임 시작 ▶'을 누르면 서버가 준 시각(epoch ms). 전원이 이 시각까지
+  // 3·2·1 카운트다운 오버레이를 함께 본다. 지나면 null 로 지운다. game:begin 이벤트로만 설정(휘발).
+  countdownStartAt: number | null;
+
   // 방 안내 토스트(참가자 퇴장·자동강퇴 등) — 잠깐 떴다 사라진다. key 는 같은 문구도 다시 뜨게 하는 nonce.
   notice: { text: string; key: number } | null;
 
@@ -123,6 +127,7 @@ interface RoomState {
   resetBalloon: () => void;
   setRouletteDraft: (labels: string[]) => void;
   setOrderDraft: (text: string) => void;
+  setCountdownStartAt: (at: number | null) => void;
   reset: () => void;
 }
 
@@ -157,6 +162,7 @@ const initial = {
   balloonRound: 0,
   rouletteDraft: [] as string[],
   orderDraft: '',
+  countdownStartAt: null as number | null,
   notice: null as { text: string; key: number } | null,
   connection: 'idle' as ConnectionStatus,
   roomError: null as ErrorCode | null,
@@ -318,6 +324,7 @@ export const useRoomStore = create<RoomState>((set) => ({
 
   setRouletteDraft: (rouletteDraft) => set({ rouletteDraft }),
   setOrderDraft: (orderDraft) => set({ orderDraft }),
+  setCountdownStartAt: (countdownStartAt) => set({ countdownStartAt }),
 
   reset: () => set({ ...initial }),
 }));

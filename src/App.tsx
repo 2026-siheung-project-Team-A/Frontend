@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppShell, DisconnectBanner, RoomToast } from './shared/ui';
+import { AppShell, DisconnectBanner, RoomToast, GameCountdown } from './shared/ui';
 import { SoundToggle } from './shared/ui/SoundToggle';
 import { useGameSounds } from './shared/lib/useGameSounds';
 import { HomePage } from './pages/Home/HomePage';
@@ -28,6 +28,7 @@ function App() {
         <DisconnectBanner />
         <SoundToggle />
         <RoomToast />
+        <GameCountdown />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/host/:roomId" element={<HostRoomPage />} />

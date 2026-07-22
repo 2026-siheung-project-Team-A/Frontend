@@ -158,10 +158,10 @@ input {
    타이포
    ------------------------------------------------------------------------- */
 .brand {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   color: var(--ink);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.4px;
 }
 .title {
   font-size: 26px;
@@ -332,6 +332,21 @@ input {
   border-radius: var(--r-field);
   background: var(--surface);
 }
+/* 항목 인라인 수정 입력칸 — 박스처럼 보이지 않게 리스트 행 안에 자연스럽게 얹는다. */
+.item-edit-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  height: auto;
+  font: inherit;
+  color: inherit;
+  box-shadow: none;
+}
+.item-edit-input:focus {
+  outline: none;
+}
 .list-row .row-remove {
   margin-left: auto;
   border: none;
@@ -493,7 +508,38 @@ input {
 .home-hint-icons {
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
+}
+/* 홈 게임 아이콘 버튼 — 호버/클릭하면 아래에 설명이 뜬다. */
+.home-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.home-hint-icon:hover {
+  background: var(--field);
+  transform: translateY(-2px);
+}
+.home-hint-icon.is-on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.home-hint-desc {
+  margin: 0;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: center;
+  word-break: keep-all;
+}
+.home-hint-desc b {
+  color: var(--accent);
 }
 .home-join {
   display: flex;
@@ -1698,6 +1744,49 @@ input {
 }
 .lobby-copy:active {
   transform: scale(0.92);
+}
+
+/* 게임 시작 3·2·1 카운트다운 오버레이 — 전원이 같은 숫자를 함께 본다. 게임 화면 위를 꽉 덮는다. */
+.gc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  animation: gc-fade 0.2s ease;
+}
+.gc-label {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.92;
+}
+.gc-num {
+  font-size: 140px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: gc-pop 0.5s cubic-bezier(0.22, 1.4, 0.5, 1);
+}
+@keyframes gc-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  45% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes gc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-overlay,
+  .gc-num {
+    animation: none;
+  }
 }
 .lobby-live {
   display: inline-flex;

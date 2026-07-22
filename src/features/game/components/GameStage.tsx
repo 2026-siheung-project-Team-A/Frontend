@@ -21,7 +21,6 @@ const META: Record<
 };
 
 export function GameStage({
-  roomId,
   gameType,
   items,
   isHost,
@@ -31,6 +30,7 @@ export function GameStage({
   onLeave,
   onAddItem,
   onRemoveItem,
+  onEditItem,
   onDraftChange,
   orderDraft,
 }: {
@@ -45,6 +45,8 @@ export function GameStage({
   /** 호스트 전용 — 항목 편집기를 스테이지 위에 함께 보여줄 때 넘긴다. */
   onAddItem?: (label: string) => void;
   onRemoveItem?: (id: string) => void;
+  /** 호스트 전용 — 이미 추가한 항목의 내용을 수정한다(id 유지). */
+  onEditItem?: (id: string, label: string) => void;
   /** 호스트 전용(순서 정하기) — 입력 중인 항목 텍스트를 참가자 미리보기로 실시간 전송. */
   onDraftChange?: (text: string) => void;
   /** 참가자 전용(순서 정하기) — 호스트가 지금 입력 중인 항목(‘입력 중’ 칩으로 표시). */
@@ -80,7 +82,7 @@ export function GameStage({
         ) : undefined
       }
     >
-      <TopBar title={meta.title} onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title={meta.title} onBack={isHost ? onLeave : undefined} />
       <p className="subtitle" style={{ marginTop: -8 }}>{meta.hint}</p>
 
       {isHost && onAddItem && onRemoveItem && (
@@ -88,6 +90,7 @@ export function GameStage({
           items={items}
           onAdd={onAddItem}
           onRemove={onRemoveItem}
+          onEdit={onEditItem}
           locked={active}
           onDraftChange={onDraftChange}
         />
