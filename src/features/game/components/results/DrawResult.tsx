@@ -1,4 +1,5 @@
 import type { GameResult } from '../../../../shared/types/api';
+import { ConfettiIcon } from '../../../../shared/ui';
 
 /**
  * 뽑기 결과 콘텐츠 (룰렛·제비·풍선 공용) — ResultModal 안에 렌더된다.
@@ -24,7 +25,9 @@ export function DrawResult({ result }: { result: GameResult }) {
           {w}
         </p>
       ))}
-      <p className="muted">오늘은 {winnerLabels.join(', ')}! 🎉</p>
+      <p className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        오늘은 {winnerLabels.join(', ')}! <ConfettiIcon size={20} />
+      </p>
     </div>
   );
 }

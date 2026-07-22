@@ -750,6 +750,16 @@ input {
   color: #9a9a9a;
   font-weight: 600;
 }
+/* 상태줄/당첨 문구 공통 슬롯 — 높이를 고정해 1줄(돌리는 중)↔2줄(당첨)로 바뀌어도
+   위 원판이 밀려 올라가지 않게(원판 위치 고정) 한다. */
+.rw-status,
+.rw-win {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 .rw-status {
   margin: 0;
   font-size: 15px;
@@ -760,19 +770,16 @@ input {
   font-size: 13px;
 }
 
-/* 룰렛 결과 배너 — 모달 대신 원판 윗단에 '당첨! [항목]' 으로 보여준다. */
-.rw-result {
+/* 룰렛 당첨 — 별도 박스를 만들지 않고 원판 아래 베이지 패널 안 상태줄 자리에 그대로 보여준다. */
+.rw-win {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin: var(--sp-3) 0 var(--sp-2);
-  padding: var(--sp-4) var(--sp-5);
-  border-radius: var(--radius-card);
-  background: var(--accent-soft, #eef0ff);
+  gap: 4px;
+  margin: 0;
   animation: rw-result-pop 0.32s cubic-bezier(0.22, 1.4, 0.5, 1) both;
 }
-.rw-result-badge {
+.rw-win-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -780,8 +787,8 @@ input {
   font-weight: 800;
   color: var(--accent);
 }
-.rw-result-name {
-  font-size: 28px;
+.rw-win-name {
+  font-size: 26px;
   font-weight: 800;
   color: var(--ink);
   line-height: 1.1;
@@ -789,11 +796,11 @@ input {
   word-break: keep-all;
 }
 @keyframes rw-result-pop {
-  from { opacity: 0; transform: scale(0.9) translateY(-6px); }
+  from { opacity: 0; transform: scale(0.9) translateY(-4px); }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rw-result { animation: none; }
+  .rw-win { animation: none; }
 }
 
 /* 결과 강조 */
@@ -1746,45 +1753,44 @@ input {
   transform: scale(0.92);
 }
 
-/* 게임 시작 3·2·1 카운트다운 오버레이 — 전원이 같은 숫자를 함께 본다. 게임 화면 위를 꽉 덮는다. */
-.gc-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
+/* 게임 시작 카운트다운 — 화면을 덮는 오버레이가 아니라, 로비 하단 안내 문구 자리에 인라인으로
+   'N초 뒤 게임으로 들어가요'를 보여준다. 전원이 서버가 준 시각까지 같은 숫자를 함께 본다. */
+.lobby-countdown {
+  margin-top: auto;
+  padding: 14px 16px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: 10px;
-  background: var(--accent);
-  color: #fff;
-  animation: gc-fade 0.2s ease;
-}
-.gc-label {
-  margin: 0;
-  font-size: 18px;
+  gap: 8px;
+  border-radius: var(--radius-lg, 16px);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
   font-weight: 700;
-  opacity: 0.92;
+  animation: lc-fade 0.2s ease;
 }
-.gc-num {
-  font-size: 140px;
+.lobby-countdown-num {
+  font-size: 40px;
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  animation: gc-pop 0.5s cubic-bezier(0.22, 1.4, 0.5, 1);
+  animation: lc-pop 0.4s cubic-bezier(0.22, 1.4, 0.5, 1);
 }
-@keyframes gc-pop {
-  0% { transform: scale(0.4); opacity: 0; }
+.lobby-countdown-text {
+  font-size: 16px;
+}
+@keyframes lc-pop {
+  0% { transform: scale(0.5); opacity: 0; }
   45% { transform: scale(1.12); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
-@keyframes gc-fade {
+@keyframes lc-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gc-overlay,
-  .gc-num {
+  .lobby-countdown,
+  .lobby-countdown-num {
     animation: none;
   }
 }

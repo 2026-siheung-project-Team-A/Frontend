@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Item } from '../../../shared/types/api';
 import { Screen, Button, TopBar, TrophyIcon } from '../../../shared/ui';
+import { playSound } from '../../../shared/lib/sound';
 
 /** 원판 슬라이스 파스텔 색 (최대 8칸) */
 const SLICE_COLORS = [
@@ -9,6 +10,8 @@ const SLICE_COLORS = [
 ];
 const MIN = 2;
 const MAX = 12;
+/** 원판 회전 애니메이션 길이(ms) — 7초 고정. 이 시각에 원판이 멈추고 당첨음이 난다. */
+const SPIN_MS = 7000;
 
 /**
  * 원판 돌리기 — 호스트는 이 화면 안에서 옵션 개수(±, 2~8)를 정하고
@@ -85,7 +88,8 @@ export function Roulette({
   function done() {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    setLanded(true); // 윗단 '당첨!' 배너 + 하단 '방으로 돌아가기' 노출
+    setLanded(true); // 베이지 패널 안 '당첨!' + 하단 '방으로 돌아가기' 노출
+    playSound('win'); // 7초 회전이 끝나 원판이 멈추는 이 순간에 당첨음(소리·정지·표시가 일치).
     onFinish?.();
   }
 
@@ -104,17 +108,25 @@ export function Roulette({
       : items.findIndex((it) => it.id === winner.id);
     if (idx < 0) return;
     spunFor.current = winner.id;
+    finishedRef.current = false; // 새 당첨 스핀 시작 — 착지 가드 초기화(참가자 다회차 대비).
+    playSound('spin'); // 원판이 도는 동안(~7초) 점점 느려지는 딸깍 소리. 정지 시 당첨음(done)으로 이어진다.
     const target = 360 * 5 - (idx * seg + seg / 2); // 포인터(12시)가 당첨 칸 중앙
     const raf = requestAnimationFrame(() =>
       setRotation((r) => r - (r % 360) + target),
     );
-    const fb = setTimeout(done, 4600); // 회전 4s + 여유
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(fb);
-    };
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [winner, items, seg, editable, isHost]);
+
+  // 당첨 착지 — 회전이 7초 고정이라, winner 확정 후 정확히 7초에 착지(당첨 표시 + 당첨음)한다.
+  // transitionend 이벤트에 의존하지 않아, 회전 중간에 소리가 새는 일이 없다(고정 타이머 하나만).
+  // deps 를 [winner, editable] 로 좁혀, items/seg 변화로 재실행돼 타이머가 취소·재스케줄되지 않게 한다.
+  useEffect(() => {
+    if (editable || !winner) return;
+    const id = setTimeout(done, SPIN_MS);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winner, editable]);
 
   // '같은 항목으로 다시하기'(winner 초기화) → 셋업 복귀 (slots는 유지해 그대로 다시 돌릴 수 있게)
   useEffect(() => {
@@ -164,8 +176,11 @@ export function Roulette({
       <div className="rw-pointer" />
       <div
         className="rw-wheel"
-        style={{ background: gradient, transform: `rotate(${rotation}deg)` }}
-        onTransitionEnd={done}
+        style={{
+          background: gradient,
+          transform: `rotate(${rotation}deg)`,
+          transitionDuration: `${SPIN_MS}ms`,
+        }}
       >
         <div className="rw-hub" />
         {displayLabels.map((label, i) =>
@@ -213,15 +228,6 @@ export function Roulette({
     >
       <TopBar title="원판 돌리기" onBack={isHost ? onLeave : undefined} />
 
-      {/* 결과 — 모달 대신 원판 윗단에 '당첨!' 배너로 보여준다. */}
-      {landed && winner && (
-        <div className="rw-result" role="status">
-          <span className="rw-result-badge">
-            <TrophyIcon size={18} /> 당첨!
-          </span>
-          <b className="rw-result-name">{winner.label}</b>
-        </div>
-      )}
       {editable && (
         <div className="rw-count">
           <span>옵션 개수</span>
@@ -252,8 +258,16 @@ export function Roulette({
           </p>
         )}
         {wheel}
-        {/* 당첨이 확정되면(landed) 결과 배너가 위에 있으므로 이 안내 줄은 숨긴다. */}
-        {!landed && (
+        {/* 당첨이 확정되면(landed) 별도 박스를 만들지 않고, 이 베이지 패널 안 상태줄 자리에
+            그대로 '당첨! [항목]'을 보여준다. */}
+        {landed && winner ? (
+          <p className="rw-win" key="win" role="status">
+            <span className="rw-win-badge">
+              <TrophyIcon size={18} /> 당첨!
+            </span>
+            <b className="rw-win-name">{winner.label}</b>
+          </p>
+        ) : (
           <p className={`rw-status${editable ? '' : ' muted'}`} key="status">
             {editable ? (
               <>
