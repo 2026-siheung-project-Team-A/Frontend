@@ -764,6 +764,22 @@ input {
 /* -------------------------------------------------------------------------
    투표 (⑫ 플레이 · ⑮ 결과)
    ------------------------------------------------------------------------- */
+/* 마감 카운트다운 배너 — 전원에게 보인다 */
+.vote-countdown {
+  margin-top: var(--sp-4);
+  padding: 10px var(--sp-4);
+  border-radius: var(--r-field);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+.vote-countdown b {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
 .vote-row,
 .vote-result-row {
   display: grid;

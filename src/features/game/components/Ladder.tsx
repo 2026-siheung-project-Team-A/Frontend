@@ -62,6 +62,7 @@ export function Ladder({
   revealed,
   draftTopLabels,
   draftBottomLabels,
+  resultShown,
   onBuild,
   onReveal,
   onResult,
@@ -77,6 +78,8 @@ export function Ladder({
   /** 참가자용 — 호스트가 아직 시작 안 한(build 전) 동안의 실시간 미리보기 라벨(ladder:draft). */
   draftTopLabels?: string[];
   draftBottomLabels?: string[];
+  /** '결과 보기'를 눌러 결과 모달이 뜬 상태. 이때는 사다리 내려오는 애니메이션 없이 정지된 판을 보여준다. */
+  resultShown?: boolean;
   onBuild: (topLabels: string[], bottomLabels: string[]) => void;
   onReveal: (topIndex: number) => void;
   onResult: () => void;
@@ -138,6 +141,7 @@ export function Ladder({
         topLabels={topLabels}
         bottomLabels={bottomLabels}
         revealed={revealed}
+        resultShown={resultShown}
         onReveal={onReveal}
         onResult={onResult}
         onLeave={onLeave}
@@ -267,6 +271,7 @@ function PlayBoard({
   topLabels,
   bottomLabels,
   revealed,
+  resultShown,
   onReveal,
   onResult,
   onLeave,
@@ -277,6 +282,7 @@ function PlayBoard({
   topLabels: string[];
   bottomLabels: string[];
   revealed: number[];
+  resultShown?: boolean;
   onReveal: (topIndex: number) => void;
   onResult: () => void;
   onLeave: () => void;
@@ -286,7 +292,13 @@ function PlayBoard({
   const allRevealed = revealed.length >= ladder.columns;
   // 사다리에는 '가장 최근에 누른' 시작칸 하나만 색으로 남긴다 — 새로 누르면 이전 경로는 되돌아간다.
   // (한 번 누른 칸은 계속 비활성으로 유지해 다시 못 누르게 한다.)
-  const active = revealed.length ? revealed[revealed.length - 1] : null;
+  // '결과 보기'로 결과 모달이 뜬 상태(resultShown)에서는 활성 경로를 없애 — 마지막 칸이 새로 내려오는
+  // 애니메이션 없이, 모든 사다리가 정지된(꺼진) 판 위에 결과 창이 뜨게 한다.
+  const active = resultShown
+    ? null
+    : revealed.length
+      ? revealed[revealed.length - 1]
+      : null;
   // 하단칸(노란색) 하이라이트는 '지금 활성 경로가 바닥에 도착했을 때'에만 켠다.
   //  - 미리 노래지는 것 방지: 경로 애니메이션이 끝나야(onArrive) arrived 가 채워진다.
   //  - 다른 목록의 사다리를 시작하면 active 가 바뀌어 arrived !== active 가 되므로, 켜져 있던

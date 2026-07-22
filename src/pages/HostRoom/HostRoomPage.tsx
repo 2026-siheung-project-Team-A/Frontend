@@ -52,6 +52,8 @@ export function HostRoomPage() {
   const storeItems = useRoomStore((s) => s.items);
   const storeResult = useRoomStore((s) => s.result);
   const tally = useRoomStore((s) => s.tally);
+  const voteStatus = useRoomStore((s) => s.voteStatus);
+  const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
   const connection = useRoomStore((s) => s.connection);
   const ladder = useRoomStore((s) => s.ladder);
   const ladderTopLabels = useRoomStore((s) => s.ladderTopLabels);
@@ -162,10 +164,25 @@ export function HostRoomPage() {
     if (connected && s) gameSocket.castVote(s, itemId);
     setMyVote(itemId);
   };
-  // ⑫ 투표 '마감'
+  // ⑫ 투표 '시작'(open) — 이후 참가자·호스트가 투표할 수 있다.
+  const startVote = () => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.startVote(s);
+  };
+  // ⑫ 투표 '마감' — 10초 카운트다운을 시작한다(closing).
   const closeVote = () => {
     const s = socketRef.current;
     if (connected && s) gameSocket.closeVote(s);
+  };
+  // ⑫ 카운트다운 '취소' — 다시 투표를 연다(open).
+  const cancelVoteClose = () => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.cancelVoteClose(s);
+  };
+  // ⑫ 카운트다운 0초 — 실제 마감(결과). VotePlay 가 0초에 호출한다.
+  const finalizeVote = () => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.finalizeVote(s);
   };
 
   // ⑧ 즉시게임(슬롯) 시작 → game:start. 백엔드가 결과 계산·전원 broadcast.
@@ -230,13 +247,19 @@ export function HostRoomPage() {
     const s = socketRef.current;
     if (connected && s) gameSocket.sendDrawDraft(s, count, blanks);
   };
-
-  // '방으로 돌아가기' — 라운드를 접어(서버가 결과·투표·사다리·제비 데이터 삭제, 대기 전환)
-  // 로비(qr)로 돌아간다. 참가자를 강제 이동시키지 않는다 — 각자 결과창의 '방으로 돌아가기'로 온다.
-  // 로비에서 호스트는 게임 종류를 바꾸거나(인라인) 다시 시작할 수 있다.
-  const returnToRoom = () => {
+  // 순서 정하기 항목 실시간 미리보기 — 호스트가 입력 중인 항목을 참가자가 '입력 중'으로 본다.
+  const sendOrderDraft = (text: string) => {
     const s = socketRef.current;
-    if (connected && s) gameSocket.returnToRoom(s); // 서버 데이터 삭제 + status:waiting
+    if (connected && s) gameSocket.sendOrderDraft(s, text);
+  };
+
+  // 라운드를 접어(서버가 결과·투표·사다리·제비 데이터 삭제, 대기 전환) 로비(qr)로 돌아간다.
+  //  - notify=false(결과 후 '방으로 돌아가기'): 참가자를 강제 이동시키지 않는다(각자 복귀).
+  //  - notify=true(게임 설정 단계 좌측 화살표=게임 취소): 참가자 전원을 로비로 끌어온다.
+  // 로비에서 호스트는 게임 종류를 바꾸거나(인라인) 다시 시작할 수 있다.
+  const returnToRoom = (notify = false) => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.returnToRoom(s, notify); // 서버 데이터 삭제 + status:waiting
     setLocalResult(null);
     setMyVote(null); // 다음 라운드를 위해 호스트 투표 선택 초기화
     const st = useRoomStore.getState();
@@ -297,10 +320,16 @@ export function HostRoomPage() {
         tally={tally}
         isHost
         myVote={myVote}
+        voteStatus={voteStatus}
+        voteCloseAt={voteCloseAt}
         onVote={castVote}
+        onStart={startVote}
         onClose={closeVote}
+        onCancelClose={cancelVoteClose}
+        onFinalize={finalizeVote}
         onAddItem={addItem}
         onRemoveItem={removeItem}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   } else if (gameType === 'roulette' || !gameType) {
@@ -315,7 +344,7 @@ export function HostRoomPage() {
           if (connected && s) gameSocket.sendRouletteDraft(s, labels);
         }}
         onFinish={finishPlay}
-        onLeave={goHome}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   } else if (gameType === 'ladder') {
@@ -328,11 +357,12 @@ export function HostRoomPage() {
         topLabels={ladderTopLabels}
         bottomLabels={ladderBottomLabels}
         revealed={ladderRevealed}
+        resultShown={!!ladderResult}
         onBuild={buildLadder}
         onReveal={revealLadder}
         onResult={showLadderResult}
         onDraftChange={sendLadderDraft}
-        onLeave={goHome}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   } else if (gameType === 'draw') {
@@ -348,8 +378,8 @@ export function HostRoomPage() {
         onAutoResolve={autoResolveDraw}
         onDraftChange={sendDrawDraft}
         participantCount={participants.length}
-        onReturn={() => setConfirmReturn(true)}
-        onLeave={goHome}
+        onReturn={() => returnToRoom()}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   } else if (gameType === 'balloon') {
@@ -365,8 +395,8 @@ export function HostRoomPage() {
         onStart={startBalloon}
         onPump={pumpBalloon}
         onPass={passBalloon}
-        onReturn={() => setConfirmReturn(true)}
-        onLeave={goHome}
+        onReturn={() => returnToRoom()}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   } else {
@@ -382,6 +412,8 @@ export function HostRoomPage() {
         onFinish={finishPlay}
         onAddItem={addItem}
         onRemoveItem={removeItem}
+        onDraftChange={sendOrderDraft}
+        onLeave={() => setConfirmReturn(true)}
       />
     );
   }
@@ -390,7 +422,7 @@ export function HostRoomPage() {
     <>
       {content}
       {status === 'finished' && activeResult && (
-        <ResultModal onReturn={() => setConfirmReturn(true)}>
+        <ResultModal onReturn={() => returnToRoom()}>
           {activeResult.type === 'vote' ? (
             <VoteResult result={activeResult} />
           ) : activeResult.type === 'order' ? (
@@ -401,7 +433,7 @@ export function HostRoomPage() {
         </ResultModal>
       )}
       {ladderResult && (
-        <ResultModal onReturn={() => setConfirmReturn(true)}>
+        <ResultModal onReturn={() => returnToRoom()}>
           <LadderResult result={ladderResult} />
         </ResultModal>
       )}
@@ -430,7 +462,7 @@ export function HostRoomPage() {
                 <Button
                   onClick={() => {
                     setConfirmReturn(false);
-                    returnToRoom();
+                    returnToRoom(true);
                   }}
                 >
                   돌아가기

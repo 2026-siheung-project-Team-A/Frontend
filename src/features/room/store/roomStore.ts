@@ -19,6 +19,8 @@ import type {
   LadderStructure,
   RoomStatePayload,
   RoomStatus,
+  VoteStatePayload,
+  VoteStatus,
   VoteTallyEntry,
 } from '../../../shared/types/api';
 
@@ -50,6 +52,8 @@ interface RoomState {
   items: Item[];
   result: GameResult | null;
   tally: VoteTallyEntry[]; // 투표 실시간 집계 (vote:updated)
+  voteStatus: VoteStatus; // 투표 라이프사이클(vote:state / room:state) — preparing|open|closing|closed
+  voteCloseAt: number | null; // 마감 카운트다운 종료 시각(epoch ms). closing 이 아니면 null.
   onlineCount: number; // 이 방 접속 소켓 수 (online:count / room:state)
 
   // 사다리(네이버 스타일) — ladder:built/revealed/result + room:state 로 복원
@@ -71,6 +75,10 @@ interface RoomState {
 
   // 원판(룰렛) 실시간 편집 미리보기 — roulette:draft. 저장 전 상태라 room:state 로 복원되지 않는다.
   rouletteDraft: string[];
+
+  // 순서 정하기 실시간 미리보기 — 호스트가 지금 입력 중인(아직 커밋 안 한) 항목 텍스트.
+  // 커밋된 항목은 items 로 이미 실시간 공유되고, 이 값은 '입력 중' 고스트 칩으로만 보여준다.
+  orderDraft: string;
 
   // 방 안내 토스트(참가자 퇴장·자동강퇴 등) — 잠깐 떴다 사라진다. key 는 같은 문구도 다시 뜨게 하는 nonce.
   notice: { text: string; key: number } | null;
@@ -94,6 +102,7 @@ interface RoomState {
   setReadyPlayers: (ready: string[]) => void;
   setResult: (result: GameResult | null) => void;
   setTally: (tally: VoteTallyEntry[]) => void;
+  setVoteState: (payload: VoteStatePayload) => void;
   setOnlineCount: (onlineCount: number) => void;
   setError: (code: ErrorCode | null) => void;
   setClosed: (closed: boolean) => void;
@@ -113,6 +122,7 @@ interface RoomState {
   applyBalloonPassed: (payload: BalloonPassedPayload) => void;
   resetBalloon: () => void;
   setRouletteDraft: (labels: string[]) => void;
+  setOrderDraft: (text: string) => void;
   reset: () => void;
 }
 
@@ -131,6 +141,8 @@ const initial = {
   items: [] as Item[],
   result: null as GameResult | null,
   tally: [] as VoteTallyEntry[],
+  voteStatus: 'preparing' as VoteStatus,
+  voteCloseAt: null as number | null,
   onlineCount: 0,
   ladder: null as LadderStructure | null,
   ladderTopLabels: [] as string[],
@@ -144,6 +156,7 @@ const initial = {
   balloon: null as BalloonState | null,
   balloonRound: 0,
   rouletteDraft: [] as string[],
+  orderDraft: '',
   notice: null as { text: string; key: number } | null,
   connection: 'idle' as ConnectionStatus,
   roomError: null as ErrorCode | null,
@@ -177,6 +190,9 @@ export const useRoomStore = create<RoomState>((set) => ({
       // 진행 중 제비판도 그대로 복원(뽑힌 제비만 blank 공개된 상태로 온다).
       draw: state.draw ?? null,
       balloon: state.balloon ?? null,
+      // 투표 단계·카운트다운도 복원(늦은 입장/재접속이 현재 투표 상태를 그대로 본다).
+      voteStatus: state.voteStatus ?? 'preparing',
+      voteCloseAt: state.voteCloseAt ?? null,
     }),
   setStatus: (status) => set({ status }),
   setGameType: (gameType) => set({ gameType }),
@@ -185,6 +201,8 @@ export const useRoomStore = create<RoomState>((set) => ({
   setReadyPlayers: (readyPlayers) => set({ readyPlayers }),
   setResult: (result) => set({ result }),
   setTally: (tally) => set({ tally }),
+  setVoteState: ({ status, closeAt }) =>
+    set({ voteStatus: status, voteCloseAt: closeAt }),
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setError: (roomError) => set({ roomError }),
   setClosed: (closed) => set({ closed }),
@@ -290,6 +308,7 @@ export const useRoomStore = create<RoomState>((set) => ({
   resetBalloon: () => set({ balloon: null }),
 
   setRouletteDraft: (rouletteDraft) => set({ rouletteDraft }),
+  setOrderDraft: (orderDraft) => set({ orderDraft }),
 
   reset: () => set({ ...initial }),
 }));

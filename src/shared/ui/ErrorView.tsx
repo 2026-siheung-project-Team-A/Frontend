@@ -79,6 +79,16 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
     title: '비밀번호가 맞지 않아요',
     desc: '이 방은 비밀방이에요. 호스트에게 받은 비밀번호를 다시 확인해 주세요.',
   },
+  VOTE_NOT_OPEN: {
+    emoji: '🗳️',
+    title: '아직 투표할 수 없어요',
+    desc: '호스트가 투표를 시작하면 투표할 수 있어요.',
+  },
+  VOTE_NO_VOTES: {
+    emoji: '🗳️',
+    title: '아직 표가 없어요',
+    desc: '한 명 이상 투표하면 마감할 수 있어요.',
+  },
   VALIDATION_ERROR: {
     emoji: '⚠️',
     title: '입력을 확인해 주세요',

@@ -31,6 +31,8 @@ export function GameStage({
   onLeave,
   onAddItem,
   onRemoveItem,
+  onDraftChange,
+  orderDraft,
 }: {
   roomId: string;
   gameType: Exclude<GameType, 'roulette' | 'vote'>;
@@ -43,17 +45,22 @@ export function GameStage({
   /** 호스트 전용 — 항목 편집기를 스테이지 위에 함께 보여줄 때 넘긴다. */
   onAddItem?: (label: string) => void;
   onRemoveItem?: (id: string) => void;
+  /** 호스트 전용(순서 정하기) — 입력 중인 항목 텍스트를 참가자 미리보기로 실시간 전송. */
+  onDraftChange?: (text: string) => void;
+  /** 참가자 전용(순서 정하기) — 호스트가 지금 입력 중인 항목(‘입력 중’ 칩으로 표시). */
+  orderDraft?: string;
 }) {
   const meta = META[gameType];
   const [active, setActive] = useState(false);
   const finishedRef = useRef(false);
 
-  // 결과 도착 → 애니메이션 재생 후 결과 화면으로 전환
+  // 결과 도착 → 애니메이션(reel-spin 등) 재생 후 결과 화면으로 전환.
+  // 순서 정하기는 긴장감을 조금 더 주려고 재생 시간을 늘렸다.
   useEffect(() => {
     if (!result || finishedRef.current) return;
     finishedRef.current = true;
     setActive(true);
-    const t = setTimeout(() => onFinish?.(), 1700);
+    const t = setTimeout(() => onFinish?.(), 2500);
     return () => clearTimeout(t);
   }, [result, onFinish]);
 
@@ -77,7 +84,13 @@ export function GameStage({
       <p className="subtitle" style={{ marginTop: -8 }}>{meta.hint}</p>
 
       {isHost && onAddItem && onRemoveItem && (
-        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} locked={active} />
+        <ItemEditor
+          items={items}
+          onAdd={onAddItem}
+          onRemove={onRemoveItem}
+          locked={active}
+          onDraftChange={onDraftChange}
+        />
       )}
 
       <div className={`stage-visual${active ? ' active' : ''}`}>
@@ -86,6 +99,12 @@ export function GameStage({
             {items.map((it) => (
               <span key={it.id} className="order-chip">{it.label}</span>
             ))}
+            {/* 참가자 화면 — 호스트가 지금 입력 중인 항목을 '입력 중' 고스트 칩으로 실시간 표시 */}
+            {!isHost && orderDraft && orderDraft.trim() && (
+              <span className="order-chip" style={{ opacity: 0.5, borderStyle: 'dashed' }}>
+                {orderDraft.trim()}…
+              </span>
+            )}
           </div>
         )}
 
