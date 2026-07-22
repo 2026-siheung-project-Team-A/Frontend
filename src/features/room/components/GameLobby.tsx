@@ -70,6 +70,23 @@ export function GameLobby({
   };
   const [qr, setQr] = useState<string | null>(null);
 
+  // 게임 시작 카운트다운 — 호스트가 '게임 시작 ▶'을 누르면 서버가 준 시각(countdownStartAt)까지
+  // 전원이 로비에 머문 채 'N초 뒤 게임으로 들어가요'를 함께 본다(각자 로컬 시계로 동기화).
+  const countdownStartAt = useRoomStore((s) => s.countdownStartAt);
+  const [countdownSecs, setCountdownSecs] = useState(0);
+  useEffect(() => {
+    if (!countdownStartAt) {
+      setCountdownSecs(0);
+      return;
+    }
+    const tick = () =>
+      setCountdownSecs(Math.max(0, Math.ceil((countdownStartAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 100);
+    return () => clearInterval(id);
+  }, [countdownStartAt]);
+  const counting = !!countdownStartAt && countdownSecs > 0;
+
   useEffect(() => {
     if (!joinUrl) return;
     let alive = true;
@@ -105,15 +122,15 @@ export function GameLobby({
       footer={
         isHost ? (
           <div className="grid-2">
-            <Button variant="secondary" onClick={() => setQrOpen(true)}>
+            <Button variant="secondary" onClick={() => setQrOpen(true)} disabled={counting}>
               QR 보기
             </Button>
-            <Button onClick={onStart} disabled={!gameType || pending.length > 0}>
+            <Button onClick={onStart} disabled={!gameType || pending.length > 0 || counting}>
               게임 시작 ▶
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" block onClick={() => setConfirmLeave(true)}>
+          <Button variant="secondary" block onClick={() => setConfirmLeave(true)} disabled={counting}>
             방 나가기
           </Button>
         )
@@ -121,7 +138,7 @@ export function GameLobby({
     >
       <TopBar
         title={title?.trim() ? title : '게임 대기방'}
-        onBack={() => setConfirmLeave(true)}
+        onBack={counting ? undefined : () => setConfirmLeave(true)}
       />
 
       <div className="lobby-head">
@@ -212,17 +229,26 @@ export function GameLobby({
         ))}
       </div>
 
-      <p className="center muted lobby-foot">
-        {isHost
-          ? pending.length > 0
-            ? `${pending.length}명이 방으로 돌아오는 중이에요. 모두 돌아오면 새 게임을 시작할 수 있어요.`
-            : !gameType
-              ? '먼저 게임을 고르고, 준비되면 게임 시작을 눌러요'
-              : participants.length === 0
-                ? 'QR 보기로 친구를 초대하고, 다 모이면 게임을 시작하세요'
-                : '사람들이 다 모이면 게임 시작을 눌러요'
-          : '호스트가 곧 게임을 시작해요…'}
-      </p>
+      {counting ? (
+        <div className="lobby-countdown" role="status" aria-live="assertive">
+          <span className="lobby-countdown-num" key={countdownSecs}>
+            {countdownSecs}
+          </span>
+          <span className="lobby-countdown-text">초 뒤 게임으로 들어가요</span>
+        </div>
+      ) : (
+        <p className="center muted lobby-foot">
+          {isHost
+            ? pending.length > 0
+              ? `${pending.length}명이 방으로 돌아오는 중이에요. 모두 돌아오면 새 게임을 시작할 수 있어요.`
+              : !gameType
+                ? '먼저 게임을 고르고, 준비되면 게임 시작을 눌러요'
+                : participants.length === 0
+                  ? 'QR 보기로 친구를 초대하고, 다 모이면 게임을 시작하세요'
+                  : '사람들이 다 모이면 게임 시작을 눌러요'
+            : '호스트가 곧 게임을 시작해요…'}
+        </p>
+      )}
 
       {isHost && onDeleteRoom && (
         <button

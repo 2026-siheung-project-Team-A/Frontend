@@ -22,6 +22,9 @@ import { Loading, Button } from '../../shared/ui';
 
 type Phase = 'select' | 'qr' | 'play';
 
+/** 게임 시작 카운트다운 길이(ms) — 백엔드 GameGateway.BEGIN_COUNTDOWN_MS 와 맞춘다. */
+const BEGIN_COUNTDOWN_MS = 3000;
+
 /**
  * 호스트 방 — 진행 흐름(local phase) + 결과(store.status).
  *  select : ② 게임 선택 → game:select
@@ -80,6 +83,20 @@ export function HostRoomPage() {
       setPhase((p) => (p === 'select' ? 'qr' : p));
     }
   }, [gameType, storeGameType]);
+
+  // 게임 시작 카운트다운 후 게임 화면(play)으로 전환하는 시각(epoch ms). 로비 표시용 store 값
+  // (countdownStartAt)과 분리해 둔다 — 소켓 핸들러가 startAt 에 그 값을 null 로 지워도 이 전환은
+  // 취소되지 않는다(둘을 묶으면 null 처리가 전환 타이머를 함께 죽여 호스트가 로비에 갇힌다).
+  const [playAt, setPlayAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (playAt == null) return;
+    const id = setTimeout(() => {
+      setPlayAt(null);
+      setPhase('play');
+    }, Math.max(0, playAt - Date.now()));
+    return () => clearTimeout(id);
+  }, [playAt]);
+
   const [myVote, setMyVote] = useState<string | null>(null); // 호스트 본인 투표(한 표)
 
   const connected = connection === 'connected';
@@ -100,8 +117,14 @@ export function HostRoomPage() {
     if (connected && s) {
       const ack = await gameSocket.beginGame(s);
       if (ack && ack.ok === false) return; // 전원 복귀 전 — 화면 전환하지 않고 로비 유지
+      // 호스트 전환은 브로드캐스트 수신에 의존하지 않는다 — ack 성공 시 직접 카운트다운을 켠다.
+      // countdownStartAt: 로비 표시용(참가자와 동기화). playAt: 호스트 화면 전환용(store 와 분리).
+      const at = Date.now() + BEGIN_COUNTDOWN_MS;
+      useRoomStore.getState().setCountdownStartAt(at);
+      setPlayAt(at);
+      return; // 위 effect 가 카운트다운 뒤 play 로 전환한다.
     }
-    setPhase('play');
+    setPhase('play'); // offline — 카운트다운 없이 바로 전환
   };
 
   // 방 삭제 — 로비의 뒤로가기/방 삭제하기에서 확인 모달을 거친 뒤 호출된다(여기선 바로 삭제).

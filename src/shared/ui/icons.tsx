@@ -207,6 +207,33 @@ export function TrashIcon(props: IconProps) {
   );
 }
 
+/** 축하 폭죽 — 왼쪽 아래 파티 콘에서 색종이가 터져 나온다. 자체 색(듀오톤). '당첨!' 축하에 쓴다. */
+export function ConfettiIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {/* 파티 콘(폭죽 나팔) — 왼쪽 아래에서 오른쪽 위로 벌어진다 */}
+      <path d="M3.2 20.8 L11.4 12.6 L15.4 16.6 Z" fill="#f5b13f" />
+      {/* 콘 줄무늬 */}
+      <path
+        d="M6 18 L8.4 20.4 M8.5 15.5 L11 18 M11 13 L13.5 15.5"
+        stroke="#fff"
+        strokeOpacity="0.55"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+      {/* 콘 입구 테두리 */}
+      <path d="M11.4 12.6 L15.4 16.6" stroke="#d99a41" strokeWidth="1.5" strokeLinecap="round" />
+      {/* 터져 나오는 색종이 */}
+      <rect x="13.3" y="3.7" width="2.4" height="2.4" rx="0.6" fill="#e5644d" transform="rotate(24 14.5 4.9)" />
+      <rect x="17.9" y="8.1" width="2.3" height="2.3" rx="0.6" fill="#5b8fd6" transform="rotate(-16 19 9.2)" />
+      <circle cx="17.4" cy="4.3" r="1.25" fill="#4aa06a" />
+      <circle cx="20.6" cy="12.7" r="1.2" fill="#f5c451" />
+      <circle cx="12.7" cy="6.6" r="1" fill="#e79ac2" />
+      <path d="M20.4 5.6 l1.4 -0.9 M15.1 10.6 l1.6 -0.5" stroke="#8ed08c" strokeWidth="1.2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 /** 복사 — 겹친 두 문서(앞장 + 뒤에 살짝 보이는 문서). currentColor 라인 아이콘. */
 export function CopyIcon(props: IconProps) {
   return (

@@ -134,13 +134,14 @@ export function playSound(name: SoundName, opts: { level?: number } = {}): void 
       tone(c, { freq: 784, dur: 0.18, type: 'triangle', gain: 0.5, when: 0.1 });
       break;
     case 'spin': {
-      // 룰렛 회전 — 점점 느려지는 딸깍 소리(~3.6s, 원판 회전과 맞춘다)
+      // 룰렛 회전 — 점점 느려지는 딸깍 소리(~7s, 고정 7초 회전에 맞춘다). 초반은 촘촘하고
+      // 끝으로 갈수록 간격이 벌어져 원판의 감속(ease-out)과 어울린다. 정지(당첨음) 직전에 끝난다.
       let t = 0;
-      let interval = 0.05;
-      for (let i = 0; i < 44 && t < 3.6; i++) {
-        tone(c, { freq: 900, dur: 0.028, type: 'square', gain: 0.22, when: t });
+      let interval = 0.03;
+      for (let i = 0; i < 80 && t < 6.85; i++) {
+        tone(c, { freq: 900, dur: 0.028, type: 'square', gain: 0.2, when: t });
         t += interval;
-        interval *= 1.085;
+        interval *= 1.07;
       }
       break;
     }

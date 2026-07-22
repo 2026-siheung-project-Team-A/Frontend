@@ -40,8 +40,8 @@ export function useGameSounds(): void {
       // 결과 도착 — 게임별로 다르게(룰렛은 회전 후 당첨, 순서는 공개 후 팡파레, 투표는 마감 당첨)
       if (cur.result && cur.result !== prev.result) {
         if (cur.resultType === 'roulette') {
-          playSound('spin');
-          timers.push(setTimeout(() => playSound('win'), 4500)); // 원판 회전(~4s) 뒤 당첨
+          // 룰렛은 여기서 소리를 내지 않는다. 회전이 7초로 고정돼, 원판이 멈추는 순간(Roulette done)에
+          // 당첨음을 내 소리·정지·'당첨!' 표시가 정확히 같은 시각에 일어난다.
         } else if (cur.resultType === 'order') {
           playSound('reveal');
           timers.push(setTimeout(() => playSound('win'), 1500));

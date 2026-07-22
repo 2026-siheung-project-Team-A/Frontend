@@ -1,4 +1,5 @@
 import type { VoteResult as VoteResultData } from '../../../../shared/types/api';
+import { ConfettiIcon } from '../../../../shared/ui';
 
 /**
  * 투표 결과 콘텐츠 — 득표순 정렬 막대 + 최다 득표(당첨). ResultModal 안에 렌더된다.
@@ -31,7 +32,9 @@ export function VoteResult({ result }: { result: VoteResultData }) {
 
       <div className="result-card" style={{ marginTop: 20, padding: 20 }}>
         <p className="section-label" style={{ color: 'var(--accent)' }}>당첨!</p>
-        <p className="result-winner" style={{ fontSize: 30 }}>{result.winner.label} 🎉</p>
+        <p className="result-winner" style={{ fontSize: 30, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          {result.winner.label} <ConfettiIcon size={26} />
+        </p>
       </div>
     </>
   );
