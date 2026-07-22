@@ -209,6 +209,13 @@ export function setMuted(next: boolean): void {
     /* 저장 실패는 무시 */
   }
   if (!next) ensure();
+  // 이미 오디오 타임라인에 예약된 소리(예: 원판 7초 딸깍)도 마스터 게인으로 즉시 반영한다.
+  // muted 플래그만으로는 '새 소리'만 막힐 뿐, 재생 중인 소리는 안 멎기 때문.
+  if (master && ctx) {
+    const now = ctx.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setTargetAtTime(next ? 0.0001 : 0.2, now, 0.015); // 짧은 페이드(클릭음 방지)
+  }
 }
 
 export function toggleMuted(): boolean {
