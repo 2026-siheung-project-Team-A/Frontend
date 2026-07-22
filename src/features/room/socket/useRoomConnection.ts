@@ -62,12 +62,17 @@ export function useRoomConnection(
     socket.on('connect', () => {
       everConnected.current = true;
       useRoomStore.getState().setConnection('connected');
-      // 참가자는 연결되면 바로 입장. ack로 실패(닉네임중복·정원초과)를 받아 store에 반영.
-      const { nickname } = useRoomStore.getState();
+      // 참가자는 연결되면 바로 입장. ack로 실패(닉네임중복·정원초과·비밀번호오류)를 받아 store에 반영.
+      // 비밀방이면 joinPassword 를 함께 실어 보낸다(자유방이면 undefined).
+      const { nickname, joinPassword } = useRoomStore.getState();
       if (role === 'participant' && nickname) {
-        socket.emit('room:join', { nickname }, (ack: Ack) => {
-          if (ack && ack.ok === false) useRoomStore.getState().setError(ack.code);
-        });
+        socket.emit(
+          'room:join',
+          { nickname, password: joinPassword ?? undefined },
+          (ack: Ack) => {
+            if (ack && ack.ok === false) useRoomStore.getState().setError(ack.code);
+          },
+        );
       }
     });
     socket.on('disconnect', (reason) => {
@@ -90,7 +95,13 @@ export function useRoomConnection(
       useRoomStore.getState().setParticipants(p.participants);
     });
     socket.on('participant:left', (p: ParticipantChangePayload) => {
-      useRoomStore.getState().setParticipants(p.participants);
+      const st = useRoomStore.getState();
+      st.setParticipants(p.participants);
+      // 누군가 방을 떠나면(직접 나가기 / 게임 후 60초 미복귀 자동강퇴) 남은 사람들에게 잠깐 알린다.
+      // 내가 나가는 경우는 이미 화면을 벗어나므로 내 닉네임이면 띄우지 않는다.
+      if (p.nickname && p.nickname !== st.nickname) {
+        st.pushNotice(`${p.nickname}님이 방에서 나갔어요`);
+      }
     });
     // 다음 게임 준비(로비로 돌아온 참가자) 목록 — 호스트 로비의 '게임 시작' 게이트에 쓴다.
     socket.on('room:readyUpdate', (p: RoomReadyUpdatePayload) => {

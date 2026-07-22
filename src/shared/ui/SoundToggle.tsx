@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { isMuted, toggleMuted } from '../lib/sound';
+import { SoundOnIcon, SoundOffIcon } from './icons';
 
 /**
  * 효과음 켜기/끄기 버튼 — 화면 우상단 고정. 설정은 localStorage 에 저장된다.
@@ -28,15 +29,14 @@ export function SoundToggle() {
         borderRadius: 999,
         border: '1px solid var(--border)',
         background: 'var(--surface)',
-        color: 'var(--ink)',
-        fontSize: 18,
+        color: muted ? 'var(--muted)' : 'var(--ink)',
         lineHeight: 1,
         cursor: 'pointer',
         boxShadow: 'var(--shadow-sm)',
         opacity: 0.9,
       }}
     >
-      {muted ? '🔇' : '🔊'}
+      {muted ? <SoundOffIcon size={20} /> : <SoundOnIcon size={20} />}
     </button>
   );
 }

@@ -1,6 +1,7 @@
 import { api } from '../../../shared/lib/axios';
 import type {
   ApiResponse,
+  CreateRoomInput,
   CreateRoomResponse,
   RoomSummary,
 } from '../../../shared/types/api';
@@ -12,8 +13,8 @@ import type {
  * 호출부는 onError에서 shared/lib/apiError 의 getApiErrorCode(err) 로 코드를 꺼내 처리한다.
  */
 export const roomApi = {
-  /** POST /api/rooms — 방 생성 */
-  async create(body: { title?: string; gameType?: string }) {
+  /** POST /api/rooms — 방 생성(게임 종류·방 이름·비밀방 옵션 포함) */
+  async create(body: CreateRoomInput) {
     const res = await api.post<ApiResponse<CreateRoomResponse>>('/rooms', body);
     return res.data.data;
   },

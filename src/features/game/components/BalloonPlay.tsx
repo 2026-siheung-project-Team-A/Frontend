@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BalloonState } from '../../../shared/types/api';
-import { Screen, Button, TopBar } from '../../../shared/ui';
+import { Screen, Button, TopBar, BalloonIcon } from '../../../shared/ui';
 
 /**
  * 풍선 터뜨리기(러시안 룰렛식, 턴제) — 가운데 풍선 하나를 순서대로 펌프한다.
@@ -186,7 +186,7 @@ export function BalloonPlay({
         {!balloon ? (
           // 대기 — 설정 화면 대신 잔잔히 떠 있는 풍선 하나(참가자가 없으면 인원 안내).
           <div className="bp-wait-stage">
-            <div className="bp-balloon-idle">🎈</div>
+            <div className="bp-balloon-idle"><BalloonIcon size={96} /></div>
             {isHost && !enoughPlayers && (
               <p className="bp-wait">
                 현재 {playerCount}명 — 참가자 {MIN_PLAYERS - 1}명부터 시작할 수 있어요
@@ -203,7 +203,7 @@ export function BalloonPlay({
               onClick={pump}
               aria-label={myTurn ? '풍선 펌프' : '풍선'}
             >
-              {done ? '💥' : '🎈'}
+              {done ? '💥' : <BalloonIcon size={96} />}
             </button>
           </div>
         )}
