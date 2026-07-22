@@ -74,6 +74,11 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
     title: '아직 다 안 돌아왔어요',
     desc: '이전 게임 참가자가 모두 방으로 돌아오면 새 게임을 시작할 수 있어요.',
   },
+  WRONG_PASSWORD: {
+    emoji: '🔒',
+    title: '비밀번호가 맞지 않아요',
+    desc: '이 방은 비밀방이에요. 호스트에게 받은 비밀번호를 다시 확인해 주세요.',
+  },
   VALIDATION_ERROR: {
     emoji: '⚠️',
     title: '입력을 확인해 주세요',

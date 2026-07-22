@@ -36,10 +36,12 @@ interface RoomState {
   nickname: string | null;
   role: 'host' | 'participant' | null;
   hostToken: string | null;
+  joinPassword: string | null; // 비밀방 입장 비밀번호(참가자) — room:join 에 실어 보낸다
 
   // 방 스냅샷(서버 → room:state / 이벤트)
   status: RoomStatus;
   gameType: GameType | null;
+  isSecret: boolean; // 비밀방 여부(room:state) — 로비 자물쇠 표시용
   participants: string[]; // 닉네임 목록
   readyPlayers: string[]; // 다음 게임을 위해 로비로 돌아온 참가자 닉네임(room:readyUpdate / room:state)
   items: Item[];
@@ -65,6 +67,9 @@ interface RoomState {
   // 원판(룰렛) 실시간 편집 미리보기 — roulette:draft. 저장 전 상태라 room:state 로 복원되지 않는다.
   rouletteDraft: string[];
 
+  // 방 안내 토스트(참가자 퇴장·자동강퇴 등) — 잠깐 떴다 사라진다. key 는 같은 문구도 다시 뜨게 하는 nonce.
+  notice: { text: string; key: number } | null;
+
   // 연결·에러
   connection: ConnectionStatus;
   roomError: ErrorCode | null;
@@ -73,6 +78,7 @@ interface RoomState {
   // actions
   setRoom: (roomId: string, role: 'host' | 'participant') => void;
   setNickname: (nickname: string) => void;
+  setJoinPassword: (password: string | null) => void;
   setHostToken: (token: string) => void;
   setConnection: (connection: ConnectionStatus) => void;
   applyRoomState: (state: RoomStatePayload) => void;
@@ -86,6 +92,8 @@ interface RoomState {
   setOnlineCount: (onlineCount: number) => void;
   setError: (code: ErrorCode | null) => void;
   setClosed: (closed: boolean) => void;
+  pushNotice: (text: string) => void;
+  clearNotice: () => void;
   applyLadderBuilt: (payload: LadderBuiltPayload) => void;
   applyLadderRevealed: (payload: LadderRevealedPayload) => void;
   applyLadderResult: (payload: LadderResultPayload) => void;
@@ -106,8 +114,10 @@ const initial = {
   nickname: null,
   role: null,
   hostToken: null,
+  joinPassword: null,
   status: 'waiting' as RoomStatus,
   gameType: null,
+  isSecret: false,
   participants: [] as string[],
   readyPlayers: [] as string[],
   items: [] as Item[],
@@ -124,6 +134,7 @@ const initial = {
   balloon: null as BalloonState | null,
   balloonRound: 0,
   rouletteDraft: [] as string[],
+  notice: null as { text: string; key: number } | null,
   connection: 'idle' as ConnectionStatus,
   roomError: null as ErrorCode | null,
   closed: false,
@@ -134,6 +145,7 @@ export const useRoomStore = create<RoomState>((set) => ({
 
   setRoom: (roomId, role) => set({ roomId, role }),
   setNickname: (nickname) => set({ nickname }),
+  setJoinPassword: (joinPassword) => set({ joinPassword }),
   setHostToken: (hostToken) => set({ hostToken }),
   setConnection: (connection) => set({ connection }),
   applyRoomState: (state) =>
@@ -141,6 +153,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       roomId: state.roomId,
       status: state.status,
       gameType: state.gameType,
+      isSecret: state.isSecret ?? false,
       participants: state.participants,
       readyPlayers: state.ready ?? [],
       items: state.items,
@@ -164,6 +177,10 @@ export const useRoomStore = create<RoomState>((set) => ({
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setError: (roomError) => set({ roomError }),
   setClosed: (closed) => set({ closed }),
+  // 안내 토스트 띄우기 — 직전 key+1 로 올려 같은 문구가 연달아 와도 애니메이션이 다시 재생된다.
+  pushNotice: (text) =>
+    set((s) => ({ notice: { text, key: (s.notice?.key ?? 0) + 1 } })),
+  clearNotice: () => set({ notice: null }),
 
   // 사다리 '시작' — 서버가 만든 구조·라벨을 반영하고 화면을 진행(playing)으로.
   applyLadderBuilt: (payload) =>

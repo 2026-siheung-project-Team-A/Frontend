@@ -4,3 +4,16 @@ export { Button } from './Button';
 export { Loading } from './Loading';
 export { ErrorView, GoHomeButton } from './ErrorView';
 export { DisconnectBanner } from './DisconnectBanner';
+export { RoomToast } from './RoomToast';
+export {
+  GameIcon,
+  RouletteIcon,
+  VoteIcon,
+  DrawIcon,
+  OrderIcon,
+  BalloonIcon,
+  LadderIcon,
+  CrownIcon,
+  SoundOnIcon,
+  SoundOffIcon,
+} from './icons';

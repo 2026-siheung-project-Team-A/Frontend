@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { GameResult, GameType } from '../../shared/types/api';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { useRoomConnection } from '../../features/room/socket/useRoomConnection';
@@ -18,6 +18,7 @@ import { OrderResult } from '../../features/game/components/results/OrderResult'
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
+import { Loading } from '../../shared/ui';
 
 type Phase = 'select' | 'qr' | 'play';
 
@@ -35,10 +36,15 @@ type Phase = 'select' | 'qr' | 'play';
 export function HostRoomPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // 방 만들기 모달에서 고른 게임 — 있으면 게임 선택 화면을 건너뛰고 바로 로비로 들어간다.
+  const presetGameType =
+    (location.state as { gameType?: GameType } | null)?.gameType ?? null;
   const socketRef = useRoomConnection(roomId, 'host');
 
   const status = useRoomStore((s) => s.status);
   const setStatus = useRoomStore((s) => s.setStatus);
+  const storeGameType = useRoomStore((s) => s.gameType);
   const participants = useRoomStore((s) => s.participants);
   const readyPlayers = useRoomStore((s) => s.readyPlayers);
   const onlineCount = useRoomStore((s) => s.onlineCount);
@@ -56,9 +62,19 @@ export function HostRoomPage() {
   const balloon = useRoomStore((s) => s.balloon);
   const balloonRound = useRoomStore((s) => s.balloonRound);
 
-  const [phase, setPhase] = useState<Phase>('select');
-  const [gameType, setGameType] = useState<GameType | null>(null);
+  // 모달에서 게임을 고르고 왔으면 그 게임으로 로비(qr)부터 시작한다. 아니면 옛 흐름대로 게임 선택.
+  const [phase, setPhase] = useState<Phase>(presetGameType ? 'qr' : 'select');
+  const [gameType, setGameType] = useState<GameType | null>(presetGameType);
   const [localResult, setLocalResult] = useState<GameResult | null>(null);
+
+  // 재접속·새로고침 등으로 네비게이션 state 를 잃었을 때 — 서버 스냅샷(room:state)의 게임을 채택해
+  // 게임 선택 화면에 갇히지 않게 한다. 로컬 gameType 이 이미 있으면 건드리지 않는다.
+  useEffect(() => {
+    if (!gameType && storeGameType) {
+      setGameType(storeGameType);
+      setPhase((p) => (p === 'select' ? 'qr' : p));
+    }
+  }, [gameType, storeGameType]);
   const [myVote, setMyVote] = useState<string | null>(null); // 호스트 본인 투표(한 표)
 
   const connected = connection === 'connected';
@@ -228,6 +244,10 @@ export function HostRoomPage() {
   };
 
   if (phase === 'select') {
+    // 새로고침 등으로 게임을 아직 모를 때: 서버 스냅샷(room:state)이 도착하기 전(최초 연결 중)에는
+    // 게임 선택 화면을 깜빡이지 않도록 로딩을 보여준다. 스냅샷에 게임이 있으면 위 effect 가 곧 qr 로
+    // 넘긴다. 연결이 끝났는데도 게임이 없으면(진짜 미선택) 그때 선택 화면을 띄운다.
+    if (connection === 'connecting' && !gameType) return <Loading />;
     return <GameSelect onSelect={chooseGame} onBack={leaveBeforeStart} />;
   }
 

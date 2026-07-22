@@ -41,6 +41,7 @@ export function GameRoomPage() {
   const gameType = useRoomStore((s) => s.gameType);
   const nickname = useRoomStore((s) => s.nickname);
   const participants = useRoomStore((s) => s.participants);
+  const readyPlayers = useRoomStore((s) => s.readyPlayers);
   const onlineCount = useRoomStore((s) => s.onlineCount);
   const items = useRoomStore((s) => s.items);
   const result = useRoomStore((s) => s.result);
@@ -65,16 +66,22 @@ export function GameRoomPage() {
   // 결과 모달이 떠 있는 상태(참가자가 아직 방으로 안 돌아옴).
   const onResult = (status === 'finished' && !!result) || !!ladderResult;
 
-  // 결과가 뜬 뒤 60초 안에 '방으로 돌아가기'를 안 누르면 강퇴 안내(KickModal)를 띄운다.
+  // 결과가 뜬 뒤 60초 안에 '방으로 돌아가기'를 안 누르면 그 순간 서버에서 실제로 방을 나가고
+  // (room:leave → 남은 사람들에게 participant:left 로 '나갔어요' 알림) 강퇴 안내(KickModal)를 띄운다.
+  // 확인을 누르면 홈으로만 이동한다(이미 나갔으므로 leave 중복 emit 하지 않음).
   // 결과 상태를 벗어나면(방으로 돌아감·새 게임 시작) 취소하고 강퇴 플래그를 해제한다.
   useEffect(() => {
     if (!onResult) {
       setKicked(false);
       return;
     }
-    const t = setTimeout(() => setKicked(true), RETURN_GRACE_MS);
+    const t = setTimeout(() => {
+      const s = socketRef.current;
+      if (s) roomSocket.leave(s);
+      setKicked(true);
+    }, RETURN_GRACE_MS);
     return () => clearTimeout(t);
-  }, [onResult]);
+  }, [onResult, socketRef]);
 
   // '방으로 돌아가기' 버튼에 보여줄 남은 초 카운트다운(강퇴 타이머와 같은 창).
   useEffect(() => {
@@ -158,9 +165,11 @@ export function GameRoomPage() {
         />
       );
     }
-    // 닉네임중복·정원초과는 닉네임 화면으로 되돌린다. 그 외는 홈으로.
+    // 닉네임중복·정원초과·비밀번호오류는 입장 화면으로 되돌린다(비밀번호 재입력). 그 외는 홈으로.
     const backToJoin =
-      roomError === 'NICKNAME_TAKEN' || roomError === 'ROOM_FULL';
+      roomError === 'NICKNAME_TAKEN' ||
+      roomError === 'ROOM_FULL' ||
+      roomError === 'WRONG_PASSWORD';
     return (
       <ErrorView
         code={roomError}
@@ -274,6 +283,7 @@ export function GameRoomPage() {
       <GameLobby
         roomId={roomId}
         participants={participants}
+        readyPlayers={readyPlayers}
         onlineCount={onlineCount}
         isHost={false}
         me={nickname}
@@ -302,7 +312,8 @@ export function GameRoomPage() {
           <LadderResult result={ladderResult} />
         </ResultModal>
       )}
-      {kicked && <KickModal onConfirm={leaveRoom} />}
+      {/* 이미 60초 시점에 room:leave 로 나갔으므로 확인은 홈 이동만 한다(leave 중복 방지). */}
+      {kicked && <KickModal onConfirm={goHome} />}
     </>
   );
 }

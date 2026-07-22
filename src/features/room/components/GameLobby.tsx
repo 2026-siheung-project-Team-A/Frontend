@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameType } from '../../../shared/types/api';
-import { Screen, Button, TopBar } from '../../../shared/ui';
+import { Screen, Button, TopBar, GameIcon, CrownIcon } from '../../../shared/ui';
 
 /** 로비에서 바로 고르는 6종 게임 (호스트: 인라인 전환 / 참가자: 현재 게임 표시) */
-const GAMES: { type: GameType; label: string; emoji: string }[] = [
-  { type: 'roulette', label: '룰렛', emoji: '🎯' },
-  { type: 'vote', label: '투표하기', emoji: '🗳️' },
-  { type: 'draw', label: '제비뽑기', emoji: '🎋' },
-  { type: 'order', label: '순서 정하기', emoji: '🔢' },
-  { type: 'balloon', label: '풍선 터뜨리기', emoji: '🎈' },
-  { type: 'ladder', label: '사다리타기', emoji: '🪜' },
+const GAMES: { type: GameType; label: string }[] = [
+  { type: 'roulette', label: '룰렛' },
+  { type: 'vote', label: '투표하기' },
+  { type: 'draw', label: '제비뽑기' },
+  { type: 'order', label: '순서 정하기' },
+  { type: 'balloon', label: '풍선 터뜨리기' },
+  { type: 'ladder', label: '사다리타기' },
 ];
 const gameLabel = (gt: GameType | null | undefined) =>
   GAMES.find((g) => g.type === gt)?.label ?? null;
@@ -61,7 +61,7 @@ export function GameLobby({
   roomId: string;
   joinUrl?: string;
   participants: string[]; // 닉네임 목록
-  readyPlayers?: string[]; // 다음 게임을 위해 로비로 돌아온 참가자(호스트만 전달). 없으면 전원 준비된 것으로 본다.
+  readyPlayers?: string[]; // 게임 후 로비로 돌아온 참가자(호스트·복귀한 참가자 모두 전달). 없으면 전원 준비된 것으로 본다.
   onlineCount?: number; // 접속 소켓 수(입장 전 포함)
   isHost: boolean;
   me?: string | null; // 내 닉네임(참가자) — 내 슬롯에 '나' 표시
@@ -96,7 +96,8 @@ export function GameLobby({
   const emptySlots = Math.max(0, MIN_SLOTS - (participants.length + 1));
 
   // 다음 게임을 시작하려면 현재 참가자 전원이 로비로 돌아와 있어야 한다(전 게임에서 안 돌아온 사람은
-  // 60초 뒤 자동 퇴장해 목록에서 빠진다). readyPlayers 를 안 주면(참가자 화면) 전원 준비된 것으로 본다.
+  // 60초 뒤 자동 퇴장해 목록에서 빠진다). 아직 안 돌아온 참가자는 로비에 있는 호스트·참가자에게
+  // 'WAITING' 으로 보인다. readyPlayers 가 없으면(초기 등) 전원 준비된 것으로 본다.
   const ready = readyPlayers ?? participants;
   const pending = participants.filter((p) => !ready.includes(p));
 
@@ -147,7 +148,7 @@ export function GameLobby({
                 className={`lobby-game${gameType === g.type ? ' is-on' : ''}`}
                 onClick={() => onSelectGame?.(g.type)}
               >
-                <span className="lobby-game-emoji">{g.emoji}</span>
+                <span className="lobby-game-emoji"><GameIcon type={g.type} size={26} /></span>
                 <span className="lobby-game-label">{g.label}</span>
               </button>
             ))}
@@ -169,8 +170,8 @@ export function GameLobby({
       <div className="lobby-roster">
         {/* 방장 슬롯 */}
         <div className="lobby-slot is-host">
-          <span className="lobby-ava" style={{ background: '#f4b740' }}>
-            👑
+          <span className="lobby-ava" style={{ background: '#f4b740', color: '#fff' }}>
+            <CrownIcon size={19} />
           </span>
           <span className="lobby-name">방장</span>
           <span className="lobby-badge host">HOST</span>
@@ -188,7 +189,8 @@ export function GameLobby({
             ) : ready.includes(nick) ? (
               <span className="lobby-badge ready">READY</span>
             ) : (
-              <span className="lobby-badge">돌아오는 중</span>
+              // 게임이 끝났는데 아직 방으로 안 돌아온 참가자(60초 자동강퇴 전) — 대기 상태로 표시.
+              <span className="lobby-badge waiting">WAITING</span>
             )}
           </div>
         ))}

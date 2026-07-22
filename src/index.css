@@ -364,6 +364,125 @@ input {
 }
 
 /* -------------------------------------------------------------------------
+   홈 — 결정 스피너 히어로(와이어프레임 '① 홈 · 개선안' / Figma 296:20)
+   ------------------------------------------------------------------------- */
+.home-headline {
+  margin-top: var(--sp-8);
+}
+.home-hero {
+  position: relative;
+  height: 300px;
+  flex-shrink: 0;
+  margin-top: var(--sp-6);
+  border-radius: var(--r-card);
+  background: var(--accent-soft);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-hero-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 210px;
+  height: 210px;
+  transform: translate(-50%, -58%);
+  border-radius: var(--r-pill);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+@media (prefers-color-scheme: dark) {
+  .home-hero-glow {
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+  }
+}
+.home-spinner {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 40px;
+  filter: drop-shadow(0 10px 20px rgba(16, 18, 23, 0.14));
+}
+.home-accent {
+  position: absolute;
+  opacity: 0.95;
+  filter: drop-shadow(0 4px 8px rgba(16, 18, 23, 0.1));
+  animation: home-float 3.2s ease-in-out infinite;
+}
+.home-accent.acc-tl {
+  top: 30px;
+  left: 22px;
+}
+.home-accent.acc-tr {
+  top: 42px;
+  right: 20px;
+  animation-delay: 0.8s;
+}
+.home-accent.acc-bl {
+  top: 186px;
+  left: 30px;
+  animation-delay: 1.6s;
+}
+.home-accent.acc-br {
+  top: 196px;
+  right: 24px;
+  animation-delay: 2.4s;
+}
+@keyframes home-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.home-verb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30px;
+  text-align: center;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.home-hint {
+  margin-top: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.home-hint-cap {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-hint-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.home-join {
+  display: flex;
+  gap: var(--sp-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-accent {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
    상태 화면(로딩 · 에러) · 배너
    ------------------------------------------------------------------------- */
 .state-screen {
@@ -783,6 +902,13 @@ input {
   font-size: 40px;
   line-height: 1;
 }
+/* 이모지 → SVG 아이콘으로 바꾼 풍선들: inline svg 의 baseline 여백을 없애 정확히 가운데 놓이게 하고
+   .bp-balloon-big 의 transform-origin(center bottom)이 아이콘 실제 밑변에 앵커되도록 한다. */
+.balloon svg,
+.bp-balloon-idle svg,
+.bp-balloon-big svg {
+  display: block;
+}
 
 /* 사다리 */
 .ladder {
@@ -869,6 +995,86 @@ input {
 }
 .modal-actions {
   margin-top: var(--sp-5);
+}
+
+/* -------------------------------------------------------------------------
+   방 만들기 모달 (CreateRoomModal)
+   ------------------------------------------------------------------------- */
+.crm-label {
+  margin: var(--sp-5) 0 var(--sp-2);
+}
+.crm-games {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.crm-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: var(--r-field);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+.crm-game:active {
+  transform: scale(0.96);
+}
+.crm-game.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.crm-game-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* 자유방 / 비밀방 세그먼트 토글 */
+.crm-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--r-field);
+  background: var(--field);
+  border: 1px solid var(--border);
+}
+.crm-seg-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--r-field) - 4px);
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.crm-seg-btn.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.crm-pin {
+  margin-top: var(--sp-4);
+}
+.crm-pin-input {
+  letter-spacing: 4px;
+  font-family: var(--mono);
+}
+.crm-hint {
+  font-size: 13px;
+  margin: var(--sp-2) 0 0;
+}
+.crm-error {
+  color: var(--danger);
+  font-size: 14px;
+  margin: var(--sp-3) 0 0;
 }
 
 /* 게임 화면에 얹는 항목 편집기 — 별도 페이지가 아니라 게임 비주얼 바로 위에 붙는다 */
@@ -1661,6 +1867,7 @@ input {
   border: none;
   background: transparent;
   padding: 0;
+  /* 평소엔 SVG 풍선 아이콘(96px)을 담지만, 터진 상태(💥 이모지)일 때는 이 font-size 가 글리프 크기를 정한다. */
   font-size: 96px;
   line-height: 1;
   cursor: default;

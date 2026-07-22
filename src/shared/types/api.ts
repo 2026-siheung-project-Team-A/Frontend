@@ -31,6 +31,7 @@ export type ErrorCode =
   | 'PUMP_FIRST'
   | 'ROOM_LOCKED'
   | 'PLAYERS_NOT_READY'
+  | 'WRONG_PASSWORD'
   | 'VALIDATION_ERROR';
 
 /** REST 공통 응답 봉투 */
@@ -38,6 +39,15 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: { code: ErrorCode; message: string };
+}
+
+/** POST /api/rooms 요청 body */
+export interface CreateRoomInput {
+  title?: string;
+  gameType?: GameType;
+  /** 비밀방 여부. true 면 password(숫자 최대 6자리) 필수. */
+  isSecret?: boolean;
+  password?: string;
 }
 
 /** POST /api/rooms 응답 */
@@ -54,6 +64,7 @@ export interface RoomSummary {
   status: RoomStatus;
   gameType: GameType | null;
   participantCount: number;
+  isSecret: boolean; // 비밀방이면 입장 시 비밀번호 필요(입력칸 노출)
 }
 
 /** GET /api/stats 응답 */
@@ -82,6 +93,7 @@ export interface RoomStatePayload {
   title: string;
   status: RoomStatus;
   gameType: GameType | null;
+  isSecret: boolean; // 비밀방 여부(자물쇠 표시용). 비밀번호는 포함되지 않는다.
   items: Item[];
   participants: string[]; // 닉네임 목록
   participantCount: number;

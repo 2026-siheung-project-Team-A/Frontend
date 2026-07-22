@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameResult, GameType, Item } from '../../../shared/types/api';
-import { Screen, Button, TopBar } from '../../../shared/ui';
+import { Screen, Button, TopBar, BalloonIcon } from '../../../shared/ui';
 import { ItemEditor } from '../../room/components/ItemEditor';
 
 /**
@@ -100,7 +100,7 @@ export function GameStage({
         {gameType === 'balloon' && (
           <div className="balloon-grid">
             {items.map((it) => (
-              <span key={it.id} className="balloon" title={it.label}>🎈</span>
+              <span key={it.id} className="balloon" title={it.label}><BalloonIcon size={40} /></span>
             ))}
           </div>
         )}
