@@ -1666,6 +1666,8 @@ input {
   border: 1px solid var(--border);
 }
 .lobby-code {
+  display: inline-flex;
+  align-items: center;
   font-size: 13px;
   color: var(--muted);
   font-weight: 600;
@@ -1675,6 +1677,27 @@ input {
   font-size: 15px;
   letter-spacing: 0.04em;
   margin-left: 4px;
+}
+/* 참여 코드 복사 버튼 */
+.lobby-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.lobby-copy:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.lobby-copy:active {
+  transform: scale(0.92);
 }
 .lobby-live {
   display: inline-flex;
