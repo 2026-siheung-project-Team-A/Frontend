@@ -173,6 +173,40 @@ export function LockIcon(props: IconProps) {
   );
 }
 
+/** 당첨 트로피 — 금색 컵 + 양쪽 손잡이 + 받침. 자체 색(듀오톤). '당첨!' 배너에 쓴다. */
+export function TrophyIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {/* 양쪽 손잡이 */}
+      <path d="M6 5.2 H4.4 A2.2 2.2 0 0 0 2.2 7.4 A3.4 3.4 0 0 0 5.6 10.8 H6.4" fill="none" stroke="#e0a52e" strokeWidth="1.6" />
+      <path d="M18 5.2 H19.6 A2.2 2.2 0 0 1 21.8 7.4 A3.4 3.4 0 0 1 18.4 10.8 H17.6" fill="none" stroke="#e0a52e" strokeWidth="1.6" />
+      {/* 컵 */}
+      <path d="M6 4 H18 V7.5 C18 11.3 15.3 13.8 12 13.8 C8.7 13.8 6 11.3 6 7.5 Z" fill="#f5b13f" />
+      <path d="M8.7 5.4 V8" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
+      {/* 기둥·받침 */}
+      <rect x="10.7" y="13.6" width="2.6" height="3" fill="#d99a41" />
+      <rect x="9" y="16.4" width="6" height="2.1" rx="1" fill="#e0a52e" />
+      <rect x="7" y="18.5" width="10" height="2.6" rx="1.3" fill="#c8892e" />
+    </Svg>
+  );
+}
+
+/** 휴지통 — 뚜껑 + 몸통 + 세로줄. 듀오톤 슬레이트. '방 삭제됨' 안내에 쓴다. */
+export function TrashIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {/* 뚜껑 손잡이 */}
+      <path d="M9.5 4 H14.5" stroke="#8a909c" strokeWidth="1.8" strokeLinecap="round" />
+      {/* 뚜껑 */}
+      <rect x="4.5" y="5.5" width="15" height="2.6" rx="1.3" fill="#8a909c" />
+      {/* 몸통 */}
+      <path d="M6.2 8.4 H17.8 L16.9 19.6 A2 2 0 0 1 14.9 21.4 H9.1 A2 2 0 0 1 7.1 19.6 Z" fill="#c3c9d4" />
+      {/* 세로줄 */}
+      <path d="M9.8 11 V18 M12 11 V18 M14.2 11 V18" stroke="#fff" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 /** GameType → 게임 아이콘 매핑. */
 export function GameIcon({
   type,

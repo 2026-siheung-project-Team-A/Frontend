@@ -350,6 +350,7 @@ export function HostRoomPage() {
           if (connected && s) gameSocket.sendRouletteDraft(s, labels);
         }}
         onFinish={finishPlay}
+        onReturn={() => returnToRoom()}
         onLeave={() => setConfirmReturn(true)}
       />
     );
@@ -428,7 +429,8 @@ export function HostRoomPage() {
   return (
     <>
       {content}
-      {status === 'finished' && activeResult && (
+      {/* 룰렛은 모달 대신 원판 윗단 '당첨!' 배너로 결과를 보여준다 — 여기선 제외. */}
+      {status === 'finished' && activeResult && activeResult.type !== 'roulette' && (
         <ResultModal onReturn={() => returnToRoom()}>
           {activeResult.type === 'vote' ? (
             <VoteResult result={activeResult} />

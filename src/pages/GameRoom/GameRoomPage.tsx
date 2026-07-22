@@ -285,6 +285,8 @@ export function GameRoomPage() {
           winner={rouletteWinner}
           draftLabels={rouletteDraft}
           onFinish={() => setStatus('finished')}
+          onReturn={returnToRoom}
+          returnCountdown={secondsLeft}
           onLeave={goHome}
         />
       );
@@ -324,7 +326,8 @@ export function GameRoomPage() {
   return (
     <>
       {content}
-      {status === 'finished' && result && (
+      {/* 룰렛은 모달 대신 원판 윗단 '당첨!' 배너로 결과를 보여준다 — 여기선 제외. */}
+      {status === 'finished' && result && result.type !== 'roulette' && (
         <ResultModal onReturn={returnToRoom} countdown={secondsLeft}>
           {result.type === 'vote' ? (
             <VoteResult result={result} />

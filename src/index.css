@@ -714,6 +714,42 @@ input {
   font-size: 13px;
 }
 
+/* 룰렛 결과 배너 — 모달 대신 원판 윗단에 '당첨! [항목]' 으로 보여준다. */
+.rw-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-3) 0 var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--radius-card);
+  background: var(--accent-soft, #eef0ff);
+  animation: rw-result-pop 0.32s cubic-bezier(0.22, 1.4, 0.5, 1) both;
+}
+.rw-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.rw-result-name {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+  text-align: center;
+  word-break: keep-all;
+}
+@keyframes rw-result-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rw-result { animation: none; }
+}
+
 /* 결과 강조 */
 .result-card {
   border-radius: var(--r-card);
