@@ -17,7 +17,7 @@ import { OrderResult } from '../../features/game/components/results/OrderResult'
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
-import { ErrorView, GoHomeButton, Button } from '../../shared/ui';
+import { ErrorView, GoHomeButton } from '../../shared/ui';
 
 /** 게임이 끝난 뒤 방으로 돌아오지 않으면 강퇴되기까지의 시간(ms). */
 const RETURN_GRACE_MS = 60_000;
@@ -111,6 +111,20 @@ export function GameRoomPage() {
     if (closed) navigate('/', { state: { roomDeleted: true } });
   }, [closed, navigate]);
 
+  // 닉네임중복·정원초과·비밀번호오류·유효기간 시작 전은 별도 에러 페이지로 튕기지 않고 입장 폼으로 되돌린다.
+  // 입장 폼(JoinRoomPage)이 navigate state 의 코드를 받아 그 자리에서 인라인으로 알려준다.
+  // (ROOM_NOT_STARTED 는 입장 폼이 방 조회로 시작 시각을 다시 확인해 "아직 안 열림" 안내를 띄운다.)
+  useEffect(() => {
+    if (
+      roomError === 'NICKNAME_TAKEN' ||
+      roomError === 'ROOM_FULL' ||
+      roomError === 'WRONG_PASSWORD' ||
+      roomError === 'ROOM_NOT_STARTED'
+    ) {
+      navigate(`/r/${roomId}`, { replace: true, state: { joinError: roomError } });
+    }
+  }, [roomError, roomId, navigate]);
+
   const pickDraw = (index: number) => {
     const s = socketRef.current;
     return s ? gameSocket.pickDraw(s, index) : Promise.resolve({ ok: false });
@@ -176,23 +190,18 @@ export function GameRoomPage() {
         />
       );
     }
-    // 닉네임중복·정원초과·비밀번호오류는 입장 화면으로 되돌린다(비밀번호 재입력). 그 외는 홈으로.
+    // 닉네임중복·정원초과·비밀번호오류는 위 useEffect 가 입장 폼으로 되돌린다 — 여기선 빈 화면(이동 대기).
     const backToJoin =
       roomError === 'NICKNAME_TAKEN' ||
       roomError === 'ROOM_FULL' ||
-      roomError === 'WRONG_PASSWORD';
+      roomError === 'WRONG_PASSWORD' ||
+      roomError === 'ROOM_NOT_STARTED';
+    if (backToJoin) return null;
+    // 그 외는 홈으로.
     return (
       <ErrorView
         code={roomError}
-        action={
-          backToJoin ? (
-            <Button variant="secondary" onClick={() => navigate(`/r/${roomId}`)}>
-              다시 입장하기
-            </Button>
-          ) : (
-            <GoHomeButton onClick={() => navigate('/')} />
-          )
-        }
+        action={<GoHomeButton onClick={() => navigate('/')} />}
       />
     );
   }
