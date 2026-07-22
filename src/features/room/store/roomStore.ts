@@ -4,6 +4,7 @@ import type {
   BalloonPumpedPayload,
   BalloonStartedPayload,
   BalloonState,
+  DrawDraftPayload,
   DrawPick,
   DrawShuffledPayload,
   DrawState,
@@ -12,6 +13,7 @@ import type {
   GameType,
   Item,
   LadderBuiltPayload,
+  LadderDraftPayload,
   LadderResultPayload,
   LadderRevealedPayload,
   LadderStructure,
@@ -39,6 +41,7 @@ interface RoomState {
   joinPassword: string | null; // 비밀방 입장 비밀번호(참가자) — room:join 에 실어 보낸다
 
   // 방 스냅샷(서버 → room:state / 이벤트)
+  title: string; // 방 이름(호스트가 방 만들 때 입력) — 로비 상단에 표시. 없으면 빈 문자열
   status: RoomStatus;
   gameType: GameType | null;
   isSecret: boolean; // 비밀방 여부(room:state) — 로비 자물쇠 표시용
@@ -55,10 +58,12 @@ interface RoomState {
   ladderBottomLabels: string[]; // 하단(당첨항목) 스냅샷
   ladderRevealed: number[]; // 공개된 시작칸 index 들
   ladderResult: LadderResultPayload | null; // '결과 보기' → 전체 매칭(모달 오픈 신호)
+  ladderDraft: LadderDraftPayload; // 편집 실시간 미리보기(ladder:draft) — 참가자가 호스트의 목록을 실시간으로 본다
 
   // 제비뽑기(인터랙티브) — draw:shuffled/picked + room:state.draw 로 복원
   draw: DrawState | null; // 현재 제비판(제비 수·꽝 수·뽑힌 제비들). null=아직 안 섞음
   drawRound: number; // 섞기 라운드 nonce — 값이 바뀌면 섞기 애니메이션을 다시 재생
+  drawDraft: DrawDraftPayload | null; // 설정 실시간 미리보기(draw:draft) — 참가자가 호스트 설정을 실시간으로 본다
 
   // 풍선 러시안룰렛(턴제) — balloon:started/popped + room:state.balloon 로 복원
   balloon: BalloonState | null; // 진행 중 풍선 상태. null=아직 시작 전
@@ -97,9 +102,11 @@ interface RoomState {
   applyLadderBuilt: (payload: LadderBuiltPayload) => void;
   applyLadderRevealed: (payload: LadderRevealedPayload) => void;
   applyLadderResult: (payload: LadderResultPayload) => void;
+  setLadderDraft: (payload: LadderDraftPayload) => void;
   resetLadder: () => void;
   applyDrawShuffled: (payload: DrawShuffledPayload) => void;
   applyDrawPicked: (payload: DrawPick) => void;
+  setDrawDraft: (payload: DrawDraftPayload) => void;
   resetDraw: () => void;
   applyBalloonStarted: (payload: BalloonStartedPayload) => void;
   applyBalloonPumped: (payload: BalloonPumpedPayload) => void;
@@ -115,6 +122,7 @@ const initial = {
   role: null,
   hostToken: null,
   joinPassword: null,
+  title: '',
   status: 'waiting' as RoomStatus,
   gameType: null,
   isSecret: false,
@@ -129,8 +137,10 @@ const initial = {
   ladderBottomLabels: [] as string[],
   ladderRevealed: [] as number[],
   ladderResult: null as LadderResultPayload | null,
+  ladderDraft: { topLabels: [], bottomLabels: [] } as LadderDraftPayload,
   draw: null as DrawState | null,
   drawRound: 0,
+  drawDraft: null as DrawDraftPayload | null,
   balloon: null as BalloonState | null,
   balloonRound: 0,
   rouletteDraft: [] as string[],
@@ -151,6 +161,7 @@ export const useRoomStore = create<RoomState>((set) => ({
   applyRoomState: (state) =>
     set({
       roomId: state.roomId,
+      title: state.title ?? '',
       status: state.status,
       gameType: state.gameType,
       isSecret: state.isSecret ?? false,
@@ -205,6 +216,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       ladderResult: payload,
       ladderRevealed: payload.pairs.map((p) => p.topIndex),
     }),
+  setLadderDraft: (ladderDraft) => set({ ladderDraft }),
   resetLadder: () =>
     set({
       ladder: null,
@@ -212,6 +224,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       ladderBottomLabels: [],
       ladderRevealed: [],
       ladderResult: null,
+      ladderDraft: { topLabels: [], bottomLabels: [] },
     }),
 
   // 제비 섞기 — 새 라운드. picks 비우고 라운드 nonce 를 올려 섞기 애니메이션을 재생, 화면은 진행(playing)으로.
@@ -233,7 +246,8 @@ export const useRoomStore = create<RoomState>((set) => ({
       if (s.draw.picks.some((p) => p.index === payload.index)) return s;
       return { draw: { ...s.draw, picks: [...s.draw.picks, payload] } };
     }),
-  resetDraw: () => set({ draw: null }),
+  setDrawDraft: (drawDraft) => set({ drawDraft }),
+  resetDraw: () => set({ draw: null, drawDraft: null }),
 
   // 풍선 시작 — 서버가 정한 크기·턴 순서로 새 판을 그린다. 라운드 nonce 올려 애니 재생, 진행(playing).
   applyBalloonStarted: (payload) =>

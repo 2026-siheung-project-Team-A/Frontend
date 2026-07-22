@@ -18,7 +18,7 @@ import { OrderResult } from '../../features/game/components/results/OrderResult'
 import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
-import { Loading } from '../../shared/ui';
+import { Loading, Button } from '../../shared/ui';
 
 type Phase = 'select' | 'qr' | 'play';
 
@@ -45,6 +45,7 @@ export function HostRoomPage() {
   const status = useRoomStore((s) => s.status);
   const setStatus = useRoomStore((s) => s.setStatus);
   const storeGameType = useRoomStore((s) => s.gameType);
+  const title = useRoomStore((s) => s.title);
   const participants = useRoomStore((s) => s.participants);
   const readyPlayers = useRoomStore((s) => s.readyPlayers);
   const onlineCount = useRoomStore((s) => s.onlineCount);
@@ -66,6 +67,8 @@ export function HostRoomPage() {
   const [phase, setPhase] = useState<Phase>(presetGameType ? 'qr' : 'select');
   const [gameType, setGameType] = useState<GameType | null>(presetGameType);
   const [localResult, setLocalResult] = useState<GameResult | null>(null);
+  // 게임 중/후 호스트 '돌아가기' 확인 모달 — 확인 시 전원(참가자 포함) 로비로 복귀시킨다.
+  const [confirmReturn, setConfirmReturn] = useState(false);
 
   // 재접속·새로고침 등으로 네비게이션 state 를 잃었을 때 — 서버 스냅샷(room:state)의 게임을 채택해
   // 게임 선택 화면에 갇히지 않게 한다. 로컬 gameType 이 이미 있으면 건드리지 않는다.
@@ -194,6 +197,11 @@ export function HostRoomPage() {
     const s = socketRef.current;
     if (s) gameSocket.buildLadder(s, topLabels, bottomLabels);
   };
+  // 사다리 편집 실시간 미리보기 — 호스트가 목록을 정하는 동안 참가자도 같은 목록을 보게 relay 한다.
+  const sendLadderDraft = (topLabels: string[], bottomLabels: string[]) => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.sendLadderDraft(s, topLabels, bottomLabels);
+  };
   const revealLadder = (topIndex: number) => {
     const s = socketRef.current;
     if (s) gameSocket.revealLadder(s, topIndex);
@@ -211,6 +219,16 @@ export function HostRoomPage() {
   const pickDraw = (index: number) => {
     const s = socketRef.current;
     return s ? gameSocket.pickDraw(s, index) : Promise.resolve({ ok: false });
+  };
+  // 제비뽑기 60초 자동 공개(호스트만) — DrawPlay 의 카운트다운이 0이 되면 호출한다.
+  const autoResolveDraw = () => {
+    const s = socketRef.current;
+    if (s) gameSocket.autoResolveDraw(s);
+  };
+  // 제비뽑기 설정 실시간 미리보기 — 호스트가 제비 수·꽝 개수를 정하는 동안 참가자도 같은 설정을 보게 relay.
+  const sendDrawDraft = (count: number, blanks: number) => {
+    const s = socketRef.current;
+    if (connected && s) gameSocket.sendDrawDraft(s, count, blanks);
   };
 
   // '방으로 돌아가기' — 라운드를 접어(서버가 결과·투표·사다리·제비 데이터 삭제, 대기 전환)
@@ -255,6 +273,7 @@ export function HostRoomPage() {
     return (
       <GameLobby
         roomId={roomId}
+        title={title}
         joinUrl={`${window.location.origin}/r/${roomId}`}
         participants={participants}
         readyPlayers={readyPlayers}
@@ -312,6 +331,7 @@ export function HostRoomPage() {
         onBuild={buildLadder}
         onReveal={revealLadder}
         onResult={showLadderResult}
+        onDraftChange={sendLadderDraft}
         onLeave={goHome}
       />
     );
@@ -325,7 +345,10 @@ export function HostRoomPage() {
         round={drawRound}
         onShuffle={shuffleDraw}
         onPick={pickDraw}
-        onReturn={returnToRoom}
+        onAutoResolve={autoResolveDraw}
+        onDraftChange={sendDrawDraft}
+        participantCount={participants.length}
+        onReturn={() => setConfirmReturn(true)}
         onLeave={goHome}
       />
     );
@@ -342,7 +365,7 @@ export function HostRoomPage() {
         onStart={startBalloon}
         onPump={pumpBalloon}
         onPass={passBalloon}
-        onReturn={returnToRoom}
+        onReturn={() => setConfirmReturn(true)}
         onLeave={goHome}
       />
     );
@@ -367,7 +390,7 @@ export function HostRoomPage() {
     <>
       {content}
       {status === 'finished' && activeResult && (
-        <ResultModal onReturn={returnToRoom}>
+        <ResultModal onReturn={() => setConfirmReturn(true)}>
           {activeResult.type === 'vote' ? (
             <VoteResult result={activeResult} />
           ) : activeResult.type === 'order' ? (
@@ -378,9 +401,44 @@ export function HostRoomPage() {
         </ResultModal>
       )}
       {ladderResult && (
-        <ResultModal onReturn={returnToRoom}>
+        <ResultModal onReturn={() => setConfirmReturn(true)}>
           <LadderResult result={ladderResult} />
         </ResultModal>
+      )}
+      {confirmReturn && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setConfirmReturn(false)}
+          role="presentation"
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ textAlign: 'center' }}
+          >
+            <p className="title center" style={{ fontSize: 20, marginTop: 0 }}>
+              정말로 돌아가시겠습니까?
+            </p>
+            <p className="subtitle center">
+              돌아가면 모든 참가자가 방으로 돌아갑니다.
+            </p>
+            <div className="modal-actions">
+              <div className="grid-2">
+                <Button variant="secondary" onClick={() => setConfirmReturn(false)}>
+                  취소
+                </Button>
+                <Button
+                  onClick={() => {
+                    setConfirmReturn(false);
+                    returnToRoom();
+                  }}
+                >
+                  돌아가기
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

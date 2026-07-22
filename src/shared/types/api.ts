@@ -170,6 +170,15 @@ export interface DrawState {
   picks: DrawPick[]; // 이미 뽑힌 제비들(순서 무관)
 }
 
+/**
+ * `draw:draft` — 제비뽑기 설정 실시간 미리보기(저장 안 됨). 호스트가 제비 수·꽝 개수를 정하는 동안
+ * 참가자도 같은 설정을 실시간으로 본다. roulette:draft / ladder:draft 와 같은 relay.
+ */
+export interface DrawDraftPayload {
+  count: number;
+  blanks: number;
+}
+
 /** `draw:shuffled` — 새 라운드 시작 신호(꽝 위치는 숨김). 전원이 섞기 애니메이션을 함께 본다. */
 export interface DrawShuffledPayload {
   count: number;
@@ -243,6 +252,15 @@ export interface LadderStructure {
 /** `ladder:built` — 사다리 구조 + 상·하단 라벨 스냅샷 */
 export interface LadderBuiltPayload {
   ladder: LadderStructure;
+  topLabels: string[];
+  bottomLabels: string[];
+}
+
+/**
+ * `ladder:draft` — 사다리 편집 실시간 미리보기(저장 안 됨). 호스트가 목록을 정하는 동안
+ * 참가자도 같은 상·하단 라벨을 실시간으로 본다. roulette:draft 와 같은 relay.
+ */
+export interface LadderDraftPayload {
   topLabels: string[];
   bottomLabels: string[];
 }

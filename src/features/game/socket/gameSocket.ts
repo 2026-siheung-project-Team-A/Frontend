@@ -67,11 +67,26 @@ export const gameSocket = {
   revealLadder: (socket: Socket, topIndex: number) =>
     socket.emit('ladder:reveal', { topIndex }),
   resultLadder: (socket: Socket) => socket.emit('ladder:result'),
+  /**
+   * 사다리 편집 실시간 미리보기(host) — 저장하지 않는 relay. 호스트가 목록을 정하는 동안
+   * 참가자도 같은 상·하단 라벨을 실시간으로 본다('사다리 시작'을 눌러야 buildLadder 로 확정).
+   */
+  sendLadderDraft: (
+    socket: Socket,
+    topLabels: string[],
+    bottomLabels: string[],
+  ) => socket.emit('ladder:draft', { topLabels, bottomLabels }),
 
   // 제비뽑기(인터랙티브) — host 가 인원수·꽝 개수로 섞고, host·참가자 누구나 제비를 뽑는다.
   //   섞기 결과는 draw:shuffled, 뽑힘은 draw:picked 로 서버가 전원 broadcast(useRoomConnection 구독).
   shuffleDraw: (socket: Socket, count: number, blanks: number) =>
     socket.emit('draw:shuffle', { count, blanks }),
+  /**
+   * 제비뽑기 설정 실시간 미리보기(host) — 저장하지 않는 relay. 호스트가 제비 수·꽝 개수를 정하는
+   * 동안 참가자도 같은 설정을 실시간으로 본다('제비 섞기'를 눌러야 shuffleDraw 로 확정).
+   */
+  sendDrawDraft: (socket: Socket, count: number, blanks: number) =>
+    socket.emit('draw:draft', { count, blanks }),
   /**
    * 제비 뽑기 — ack 를 기다리는 Promise. 이미 뽑힌 제비면 {ok:false, code:'GAME_RUNNING'} 로 거절된다
    * (서버 HSETNX 원자적 잠금 — 먼저 뽑은 사람이 선점). 성공 시 값은 draw:picked broadcast 로 반영된다.
@@ -82,6 +97,11 @@ export const gameSocket = {
         resolve(ack),
       );
     }),
+  /**
+   * 제비뽑기 60초 자동 공개(host 전용) — 카운트다운이 0이 되면 호출한다. 서버가 안 뽑힌 제비를
+   * 전부 '미선택'으로 공개하고 draw:picked 로 broadcast 한다(멱등이라 중복 호출도 안전).
+   */
+  autoResolveDraw: (socket: Socket) => socket.emit('draw:autoresolve'),
 
   // 풍선 러시안룰렛(턴제) — host 도 참가한다. 현재 턴 참가자가 자기 턴에 최대 3번 펌프하고 '넘기기'로 넘긴다.
   //   시작은 balloon:started, 펌프는 balloon:pumped, 넘기기는 balloon:passed 로 전원 broadcast(useRoomConnection 구독).

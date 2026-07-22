@@ -59,7 +59,7 @@ export function VotePlay({
         )
       }
     >
-      <TopBar title="투표하기" onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="투표하기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
       <p className="subtitle" style={{ marginTop: -8 }}>
         {isHost ? '직접 투표하고, 준비되면 마감하세요' : '하나 골라 투표하세요 (실시간 집계)'}
       </p>

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DrawState } from '../../../shared/types/api';
 import { Screen, Button, TopBar } from '../../../shared/ui';
+
+/** 라운드 시작 후 이 시간(초)이 지나면 안 뽑힌 제비를 자동으로 '미선택'으로 공개한다(백엔드 DRAW.AUTO_RESOLVE_SECONDS 와 동일). */
+const AUTO_SECONDS = 60;
 
 /**
  * 제비뽑기(인터랙티브) — 한 화면에서 설정 → 섞기 → 뽑기까지.
@@ -61,16 +64,29 @@ export function DrawPlay({
   round,
   onShuffle,
   onPick,
+  onAutoResolve,
+  onDraftChange,
+  draftCount,
+  draftBlanks,
+  participantCount,
   onReturn,
   onLeave,
 }: {
   roomId: string;
   isHost: boolean;
-  me?: string | null; // 내 닉네임(참가자) — 1인당 뽑기 상한(perPick) 판정에 쓴다. host 는 제한 없음.
+  me?: string | null; // 내 닉네임(참가자) — 1인 1제비 판정에 쓴다. host 는 제한 없음.
   draw: DrawState | null;
   round: number; // 섞기 라운드 nonce — 값이 바뀌면 제비 그리드가 다시 마운트되며 섞기 애니메이션 재생
   onShuffle: (count: number, blanks: number) => void;
   onPick: (index: number) => Promise<PickAck>;
+  onAutoResolve?: () => void; // host 전용 — 60초 카운트다운이 끝나면 안 뽑힌 제비를 자동 공개(draw:autoresolve)
+  /** 호스트용 — 설정(제비 수·꽝 개수)이 바뀔 때마다 호출, 참가자에게 실시간 전송용(draw:draft). */
+  onDraftChange?: (count: number, blanks: number) => void;
+  /** 참가자용 — 호스트가 아직 섞기 전(draw=null) 동안의 실시간 설정 미리보기(draw:draft). */
+  draftCount?: number;
+  draftBlanks?: number;
+  /** 호스트용 — 현재 참가자 수. 새 참가자가 들어오면 설정 미리보기를 다시 보내 늦게 들어와도 보이게 한다. */
+  participantCount?: number;
   onReturn?: () => void; // '방으로 돌아가기' — 제비뽑기는 결과 모달이 없어 여기서 로비 복귀를 제공
   onLeave: () => void;
 }) {
@@ -79,13 +95,48 @@ export function DrawPlay({
   const [blanks, setBlanksRaw] = useState(() => draw?.blanks ?? 1);
   const [picking, setPicking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // 60초 카운트다운 — 라운드가 시작되면 60에서 시작해 1초씩 준다. 0이 되면(호스트만) 안 뽑힌 제비를 자동 공개.
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_SECONDS);
+  const autoFiredRef = useRef(false);
 
+  // 설정이 바뀔 때마다(호스트) 참가자에게 실시간 미리보기를 보낸다(draw:draft).
   const setCount = (n: number) => {
     const next = Math.max(MIN, Math.min(MAX, n));
+    const nextBlanks = Math.max(1, Math.min(next - 1, blanks)); // 꽝은 1..count-1
     setCountRaw(next);
-    setBlanksRaw((b) => Math.max(1, Math.min(next - 1, b))); // 꽝은 1..count-1
+    setBlanksRaw(nextBlanks);
+    if (isHost) onDraftChange?.(next, nextBlanks);
   };
-  const setBlanks = (n: number) => setBlanksRaw(Math.max(1, Math.min(count - 1, n)));
+  const setBlanks = (n: number) => {
+    const nextBlanks = Math.max(1, Math.min(count - 1, n));
+    setBlanksRaw(nextBlanks);
+    if (isHost) onDraftChange?.(count, nextBlanks);
+  };
+
+  // 최초 설정 진입 시 한 번 — 참가자에게 시작 설정을 알려 미리보기 판을 바로 보여준다.
+  const didInitDraft = useRef(false);
+  useEffect(() => {
+    if (isHost && !didInitDraft.current) {
+      didInitDraft.current = true;
+      onDraftChange?.(count, blanks);
+    }
+  }, [isHost, onDraftChange, count, blanks]);
+
+  // 참가자가 새로 들어오면(늦은 입장 등) 현재 설정을 다시 보낸다 — 늦게 들어온 참가자도
+  // 제비 수·꽝 개수를 바로 보게 한다(draft 는 저장되지 않는 relay 라 재전송이 필요하다).
+  const latestSetup = useRef({ count, blanks });
+  useEffect(() => {
+    latestSetup.current = { count, blanks };
+  }, [count, blanks]);
+  const prevParticipantCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isHost) return;
+    const pc = participantCount ?? 0;
+    if (prevParticipantCount.current !== null && pc > prevParticipantCount.current) {
+      onDraftChange?.(latestSetup.current.count, latestSetup.current.blanks);
+    }
+    prevParticipantCount.current = pc;
+  }, [isHost, participantCount, onDraftChange]);
 
   const shuffle = () => {
     setNote(null);
@@ -93,15 +144,45 @@ export function DrawPlay({
   };
 
   const picks = new Map((draw?.picks ?? []).map((p) => [p.index, p]));
-  const lotCount = draw ? draw.count : count; // 설정 땐 스텝퍼 미리보기, 진행 땐 실제 제비판
+  // 설정 미리보기 값 — 호스트는 자기 스텝퍼 값, 참가자는 호스트가 relay 한 draft 값(없으면 0).
+  const setupCount = isHost ? count : (draftCount ?? 0);
+  const setupBlanks = isHost ? blanks : (draftBlanks ?? 0);
+  const lotCount = draw ? draw.count : setupCount; // 설정 땐 미리보기, 진행 땐 실제 제비판
   const remaining = draw ? draw.count - draw.picks.length : 0;
   const done = !!draw && remaining <= 0;
-  // 참가자 1인당 뽑기 상한 — 보통 1(1인 1제비)이지만, 제비수 > 사람수면 서버가 상한을 올려
-  // 참가자도 여러 개 뽑을 수 있다(host 는 제한 없음).
+  // 참가자 1인당 뽑기 상한 — 항상 1(1인 1제비). 호스트(어드민)만 이 상한과 무관하게 여러 개를 뽑는다.
   const perPick = draw?.perPick ?? 1;
   const myPicks =
     !isHost && me ? (draw?.picks ?? []).filter((p) => p.by === me).length : 0;
   const iReachedCap = !isHost && !!me && myPicks >= perPick;
+
+  // 뽑기가 진행 중(제비판이 있고 아직 다 안 뽑음)일 때만 카운트다운을 돈다.
+  const counting = !!draw && !done;
+
+  // 새 라운드(round 변경)마다 카운트다운을 60초로 리셋한다.
+  useEffect(() => {
+    autoFiredRef.current = false;
+    setSecondsLeft(AUTO_SECONDS);
+  }, [round]);
+
+  // 진행 중일 때 1초씩 감소.
+  useEffect(() => {
+    if (!counting) return;
+    const id = setInterval(
+      () => setSecondsLeft((s) => Math.max(0, s - 1)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, [counting, round]);
+
+  // 0초 도달 → 호스트가 안 뽑힌 제비를 '미선택'으로 자동 공개(한 라운드에 한 번). 참가자는 표시만 한다.
+  useEffect(() => {
+    if (secondsLeft > 0 || !counting) return;
+    if (isHost && onAutoResolve && !autoFiredRef.current) {
+      autoFiredRef.current = true;
+      onAutoResolve();
+    }
+  }, [secondsLeft, counting, isHost, onAutoResolve]);
 
   const pick = async (index: number) => {
     if (picking || picks.has(index) || iReachedCap) return;
@@ -112,9 +193,7 @@ export function DrawPlay({
     if (ack && ack.ok === false) {
       setNote(
         ack.code === 'ALREADY_PICKED'
-          ? perPick > 1
-            ? `한 사람당 최대 ${perPick}개까지 뽑을 수 있어요`
-            : '한 사람당 하나만 뽑을 수 있어요'
+          ? '한 사람당 하나만 뽑을 수 있어요'
           : ack.code === 'GAME_RUNNING'
             ? '앗, 방금 다른 사람이 먼저 뽑았어요'
             : '뽑기에 실패했어요',
@@ -124,16 +203,14 @@ export function DrawPlay({
 
   // ── 상단 안내 문구 ──
   const headline = !draw
-    ? '버튼을 눌러 제비를 섞어 주세요'
+    ? isHost
+      ? '버튼을 눌러 제비를 섞어 주세요'
+      : '호스트가 제비를 준비하고 있어요…'
     : done
       ? '모든 제비를 뽑았어요'
       : iReachedCap
-        ? '제비를 다 뽑았어요! 모두 뽑을 때까지 기다려 주세요'
-        : isHost
-          ? '제비를 골라 뽑아 주세요 (여러 개 가능)'
-          : perPick > 1
-            ? `제비를 골라 뽑아 주세요 (최대 ${perPick}개)`
-            : '제비를 하나 골라 뽑아 주세요';
+        ? '제비를 뽑았어요! 다른 사람들을 기다려 주세요'
+        : '제비를 골라 뽑아 주세요 (한 개만 선택 가능)';
 
   // ── 스텝퍼 바 (호스트만 조작, 스크린샷 상단) ──
   const controls = isHost && (
@@ -188,14 +265,31 @@ export function DrawPlay({
 
   return (
     <Screen footer={footer}>
-      <TopBar title="제비뽑기" onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="제비뽑기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
 
       {controls}
 
       <div className="jb-panel">
-        <p className="jb-headline">{headline}</p>
+        <div className="jb-headline-row">
+          <p className="jb-headline">{headline}</p>
+          {counting && (
+            <span
+              className={`jb-countdown${secondsLeft <= 10 ? ' is-urgent' : ''}`}
+              aria-label={`${secondsLeft}초 남음`}
+            >
+              ⏱ {secondsLeft}초
+            </span>
+          )}
+        </div>
 
-        {!draw && !isHost ? (
+        {/* 참가자: '호스트가 제비를 준비하고 있어요…' 바로 밑에 제비 수·꽝 개수를 보여준다. */}
+        {!draw && !isHost && lotCount > 0 && (
+          <p className="jb-setup-counts">
+            제비 <b>{setupCount}</b>개 · 꽝 <b>{setupBlanks}</b>개
+          </p>
+        )}
+
+        {!draw && !isHost && lotCount === 0 ? (
           <p className="jb-wait">호스트가 제비를 준비하고 있어요…</p>
         ) : (
           <div className="jb-row" key={round}>

@@ -6,12 +6,14 @@ import type {
   BalloonPassedPayload,
   BalloonPumpedPayload,
   BalloonStartedPayload,
+  DrawDraftPayload,
   DrawPick,
   DrawShuffledPayload,
   ErrorCode,
   GameResult,
   Item,
   LadderBuiltPayload,
+  LadderDraftPayload,
   LadderResultPayload,
   LadderRevealedPayload,
   ParticipantChangePayload,
@@ -135,6 +137,22 @@ export function useRoomConnection(
     socket.on('game:started', startRound);
     // '게임 시작 ▶' — 결과 전이지만 참가자도 곧장 게임 화면으로(대기 화면 탈출).
     socket.on('game:begin', startRound);
+    // 호스트가 게임을 취소하고 로비로 돌아감 — 참가자 전원을 로비로 되돌리고 안내 토스트를 띄운다.
+    // (호스트 소켓은 이 이벤트를 받지 않는다 — 서버가 발신자를 제외하고 broadcast 한다.)
+    socket.on('game:cancelled', () => {
+      if (role !== 'participant') return;
+      const st = useRoomStore.getState();
+      st.setResult(null);
+      st.setTally([]);
+      st.resetLadder();
+      st.resetDraw();
+      st.resetBalloon();
+      st.setRouletteDraft([]);
+      st.setStatus('waiting');
+      st.pushNotice('방장이 게임을 취소하여 방으로 돌아왔습니다');
+      // 로비 복귀를 서버에 알려(room:ready) 다음 게임 시작 게이트(전원 복귀)를 통과시킨다.
+      socket.emit('room:ready');
+    });
     // 원판 실시간 편집 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 제외).
     socket.on('roulette:draft', (p: { labels: string[] }) => {
       useRoomStore.getState().setRouletteDraft(p.labels ?? []);
@@ -152,6 +170,10 @@ export function useRoomConnection(
 
     // ── 사다리(네이버 스타일): 시작(built)·시작칸 공개(revealed)·결과 보기(result) ──
     // host·참가자 모두 같은 이벤트를 받아 같은 사다리·같은 내려가는 과정을 본다.
+    // 사다리 편집 실시간 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 호스트 제외).
+    socket.on('ladder:draft', (p: LadderDraftPayload) => {
+      useRoomStore.getState().setLadderDraft(p);
+    });
     socket.on('ladder:built', (p: LadderBuiltPayload) => {
       useRoomStore.getState().applyLadderBuilt(p);
     });
@@ -164,6 +186,10 @@ export function useRoomConnection(
 
     // ── 제비뽑기(인터랙티브): 섞기(shuffled)·뽑힘(picked) ──
     // host·참가자 모두 같은 이벤트를 받아 같은 제비판을 본다(뽑힌 제비만 꽝 여부 공개).
+    // 제비뽑기 설정 실시간 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 호스트 제외).
+    socket.on('draw:draft', (p: DrawDraftPayload) => {
+      useRoomStore.getState().setDrawDraft(p);
+    });
     socket.on('draw:shuffled', (p: DrawShuffledPayload) => {
       useRoomStore.getState().applyDrawShuffled(p);
     });

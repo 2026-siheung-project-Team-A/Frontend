@@ -73,7 +73,7 @@ export function GameStage({
         ) : undefined
       }
     >
-      <TopBar title={meta.title} onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title={meta.title} onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
       <p className="subtitle" style={{ marginTop: -8 }}>{meta.hint}</p>
 
       {isHost && onAddItem && onRemoveItem && (

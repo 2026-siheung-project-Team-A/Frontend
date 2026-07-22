@@ -163,7 +163,7 @@ export function BalloonPlay({
 
   return (
     <Screen footer={footer}>
-      <TopBar title="풍선 터뜨리기" onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
+      <TopBar title="풍선 터뜨리기" onBack={isHost ? onLeave : undefined} trailing={<span className="chip">#{roomId}</span>} />
 
       <div className="bp-panel">
         <p className="bp-headline">{headline}</p>
