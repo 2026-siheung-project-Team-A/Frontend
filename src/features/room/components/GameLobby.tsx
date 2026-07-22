@@ -48,6 +48,7 @@ export function GameLobby({
   roomId,
   joinUrl,
   participants,
+  readyPlayers,
   onlineCount = 0,
   isHost,
   me,
@@ -60,6 +61,7 @@ export function GameLobby({
   roomId: string;
   joinUrl?: string;
   participants: string[]; // 닉네임 목록
+  readyPlayers?: string[]; // 다음 게임을 위해 로비로 돌아온 참가자(호스트만 전달). 없으면 전원 준비된 것으로 본다.
   onlineCount?: number; // 접속 소켓 수(입장 전 포함)
   isHost: boolean;
   me?: string | null; // 내 닉네임(참가자) — 내 슬롯에 '나' 표시
@@ -93,6 +95,11 @@ export function GameLobby({
   const live = onlineCount || participants.length + (isHost ? 1 : 0);
   const emptySlots = Math.max(0, MIN_SLOTS - (participants.length + 1));
 
+  // 다음 게임을 시작하려면 현재 참가자 전원이 로비로 돌아와 있어야 한다(전 게임에서 안 돌아온 사람은
+  // 60초 뒤 자동 퇴장해 목록에서 빠진다). readyPlayers 를 안 주면(참가자 화면) 전원 준비된 것으로 본다.
+  const ready = readyPlayers ?? participants;
+  const pending = participants.filter((p) => !ready.includes(p));
+
   return (
     <Screen
       footer={
@@ -101,7 +108,7 @@ export function GameLobby({
             <Button variant="secondary" onClick={() => setQrOpen(true)}>
               QR 보기
             </Button>
-            <Button onClick={onStart} disabled={!gameType}>
+            <Button onClick={onStart} disabled={!gameType || pending.length > 0}>
               게임 시작 ▶
             </Button>
           </div>
@@ -178,8 +185,10 @@ export function GameLobby({
             <span className="lobby-name">{nick}</span>
             {me && nick === me ? (
               <span className="lobby-badge me">나</span>
-            ) : (
+            ) : ready.includes(nick) ? (
               <span className="lobby-badge ready">READY</span>
+            ) : (
+              <span className="lobby-badge">돌아오는 중</span>
             )}
           </div>
         ))}
@@ -195,11 +204,13 @@ export function GameLobby({
 
       <p className="center muted lobby-foot">
         {isHost
-          ? !gameType
-            ? '먼저 게임을 고르고, 준비되면 게임 시작을 눌러요'
-            : participants.length === 0
-              ? 'QR 보기로 친구를 초대하고, 다 모이면 게임을 시작하세요'
-              : '사람들이 다 모이면 게임 시작을 눌러요'
+          ? pending.length > 0
+            ? `${pending.length}명이 방으로 돌아오는 중이에요. 모두 돌아오면 새 게임을 시작할 수 있어요.`
+            : !gameType
+              ? '먼저 게임을 고르고, 준비되면 게임 시작을 눌러요'
+              : participants.length === 0
+                ? 'QR 보기로 친구를 초대하고, 다 모이면 게임을 시작하세요'
+                : '사람들이 다 모이면 게임 시작을 눌러요'
           : '호스트가 곧 게임을 시작해요…'}
       </p>
 

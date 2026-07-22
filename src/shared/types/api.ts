@@ -27,7 +27,10 @@ export type ErrorCode =
   | 'ALREADY_PICKED'
   | 'NEED_MORE_PLAYERS'
   | 'NOT_YOUR_TURN'
+  | 'PUMP_LIMIT'
+  | 'PUMP_FIRST'
   | 'ROOM_LOCKED'
+  | 'PLAYERS_NOT_READY'
   | 'VALIDATION_ERROR';
 
 /** REST 공통 응답 봉투 */
@@ -92,6 +95,13 @@ export interface RoomStatePayload {
   draw: DrawState | null;
   // 풍선 게임이 진행 중이면 그 상태(총 개수·터진 풍선·턴 순서·현재 턴·걸린 사람). 폭탄 위치는 비밀.
   balloon: BalloonState | null;
+  // 다음 게임을 위해 로비로 돌아온 참가자 닉네임들. 호스트는 현재 참가자 전원이 여기 있어야 새 게임을 시작할 수 있다.
+  ready: string[];
+}
+
+/** `room:readyUpdate` — 로비로 돌아온 참가자 목록이 바뀔 때마다(입장·복귀·퇴장). 호스트 UI 가 시작 버튼을 연다. */
+export interface RoomReadyUpdatePayload {
+  ready: string[];
 }
 
 /** `participant:joined` / `participant:left` broadcast 페이로드 (전체 목록 포함) */
@@ -158,7 +168,8 @@ export interface DrawShuffledPayload {
 // ---------------------------------------------------------------------------
 // 풍선 터뜨리기 (러시안 룰렛식, 턴제) — game:result 없이 balloon:* 이벤트로 진행.
 //   host 가 풍선 크기(=최대 펌프 수)를 정해 시작(balloon:start)하면 서버가 1..크기 사이의
-//   비밀 '터지는 순번'을 정한다. 참가자들이 순서대로 가운데 풍선을 한 번씩 펌프하고(balloon:pop),
+//   비밀 '터지는 순번'을 정한다. 호스트 포함 참가자들이 순서대로 자기 턴에 최대 maxPerTurn 번
+//   펌프(balloon:pump)하고, 1번 이상 펌프한 뒤 '넘기기'(balloon:pass)로 다음 사람에게 넘긴다.
 //   누적 펌프가 그 순번에 도달하는 순간 펌프한 사람이 걸린다(caughtBy). 순번은 걸리기 전까지 안 온다.
 // ---------------------------------------------------------------------------
 
@@ -166,25 +177,35 @@ export interface DrawShuffledPayload {
 export interface BalloonState {
   capacity: number; // 풍선 크기(이만큼 펌프하면 반드시 터짐)
   pumps: number; // 지금까지 누적 펌프 수
-  turnOrder: string[]; // 참가자 닉네임 순서
-  turn: string | null; // 현재 턴 참가자(걸린 뒤 null)
+  turnPumps: number; // 이번 턴에 펌프한 수(0..maxPerTurn)
+  maxPerTurn: number; // 한 턴에 펌프할 수 있는 최대 횟수
+  turnOrder: string[]; // 턴 순서(호스트 포함, '호스트' 로 표기)
+  turn: string | null; // 현재 턴(걸린 뒤 null). 호스트 차례면 '호스트'
   caughtBy: string | null; // 풍선을 터뜨려 걸린 참가자(진행 중이면 null)
 }
 
-/** `balloon:started` — 게임 시작(터지는 순번은 비밀). */
+/** `balloon:started` — 게임 시작(터지는 순번은 비밀). turnOrder 는 호스트를 포함한다. */
 export interface BalloonStartedPayload {
   capacity: number;
-  turnOrder: string[];
-  turn: string;
+  turnOrder: string[]; // 호스트 포함
+  turn: string; // 첫 턴
+  maxPerTurn: number;
 }
 
-/** `balloon:popped` — 누군가 풍선을 한 번 펌프할 때마다. */
-export interface BalloonPoppedPayload {
-  by: string; // 이번에 펌프한 참가자
+/** `balloon:pumped` — 현재 턴 참가자가 풍선을 한 번 펌프할 때마다(턴은 유지된다). */
+export interface BalloonPumpedPayload {
+  by: string; // 이번에 펌프한 참가자('호스트' 포함)
   pumps: number; // 갱신된 누적 펌프 수
-  turn: string | null; // 다음 턴 참가자 — 걸렸으면 null
+  turnPumps: number; // 갱신된 이번 턴 펌프 수
+  turn: string | null; // 유지되는 현재 턴 — 걸렸으면 null
   caughtBy: string | null; // 이 펌프로 터져 걸렸으면 그 사람, 아니면 null
   burst: boolean; // 이 펌프로 풍선이 터졌는지
+}
+
+/** `balloon:passed` — 현재 턴 참가자가 '넘기기'로 다음 사람에게 턴을 넘길 때. */
+export interface BalloonPassedPayload {
+  by: string; // 넘긴 사람('호스트' 포함)
+  turn: string; // 다음 턴 참가자
 }
 
 // ---------------------------------------------------------------------------

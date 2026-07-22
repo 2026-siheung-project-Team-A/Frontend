@@ -4,10 +4,10 @@ import { Screen, Button, TopBar } from '../../../shared/ui';
 import { ItemEditor } from '../../room/components/ItemEditor';
 
 /**
- * ⑫ 투표하기 — 참가자가 하나 골라 투표(vote:cast), 실시간 집계 막대.
+ * ⑫ 투표하기 — 하나 골라 투표(vote:cast), 실시간 집계 막대.
  *  참가자: 항목 선택 → "투표하기" → onVote(itemId). 다시 눌러 변경 가능.
- *  호스트: 투표는 안 하고 실시간 집계를 보며 "투표 마감"(onClose) → 결과.
- * 집계(tally)는 vote:updated 로 실시간 갱신된다.
+ *  호스트: 직접 투표(한 표)도 하고, 준비되면 "투표 마감"(onClose) → 결과.
+ * 집계(tally)는 vote:updated 로 실시간 갱신된다. 호스트 표도 백엔드가 socket.id 로 1표 집계한다.
  */
 export function VotePlay({
   roomId,
@@ -42,9 +42,16 @@ export function VotePlay({
     <Screen
       footer={
         isHost ? (
-          <Button block onClick={onClose}>
-            투표 마감
-          </Button>
+          <div className="grid-2">
+            <Button
+              variant="secondary"
+              onClick={() => selected && onVote?.(selected)}
+              disabled={!selected}
+            >
+              {myVote ? '투표 변경' : '투표하기'}
+            </Button>
+            <Button onClick={onClose}>투표 마감</Button>
+          </div>
         ) : (
           <Button block onClick={() => selected && onVote?.(selected)} disabled={!selected}>
             {myVote ? '투표 변경' : '투표하기'}
@@ -54,7 +61,7 @@ export function VotePlay({
     >
       <TopBar title="투표하기" onBack={onLeave} trailing={<span className="chip">#{roomId}</span>} />
       <p className="subtitle" style={{ marginTop: -8 }}>
-        {isHost ? '실시간 집계 · 준비되면 마감하세요' : '하나 골라 투표하세요 (실시간 집계)'}
+        {isHost ? '직접 투표하고, 준비되면 마감하세요' : '하나 골라 투표하세요 (실시간 집계)'}
       </p>
 
       {isHost && onAddItem && onRemoveItem && (
@@ -71,8 +78,7 @@ export function VotePlay({
             <button
               key={it.id}
               className={`vote-row${isSel ? ' selected' : ''}`}
-              onClick={() => !isHost && setSelected(it.id)}
-              disabled={isHost}
+              onClick={() => setSelected(it.id)}
             >
               <span className={`vote-radio${isSel || isMine ? ' on' : ''}`} />
               <span className="vote-label">{it.label}</span>

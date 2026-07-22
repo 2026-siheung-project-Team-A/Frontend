@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
-  BalloonPoppedPayload,
+  BalloonPassedPayload,
+  BalloonPumpedPayload,
   BalloonStartedPayload,
   BalloonState,
   DrawPick,
@@ -40,6 +41,7 @@ interface RoomState {
   status: RoomStatus;
   gameType: GameType | null;
   participants: string[]; // 닉네임 목록
+  readyPlayers: string[]; // 다음 게임을 위해 로비로 돌아온 참가자 닉네임(room:readyUpdate / room:state)
   items: Item[];
   result: GameResult | null;
   tally: VoteTallyEntry[]; // 투표 실시간 집계 (vote:updated)
@@ -78,6 +80,7 @@ interface RoomState {
   setGameType: (gameType: GameType | null) => void;
   setItems: (items: Item[]) => void;
   setParticipants: (participants: string[]) => void;
+  setReadyPlayers: (ready: string[]) => void;
   setResult: (result: GameResult | null) => void;
   setTally: (tally: VoteTallyEntry[]) => void;
   setOnlineCount: (onlineCount: number) => void;
@@ -91,7 +94,8 @@ interface RoomState {
   applyDrawPicked: (payload: DrawPick) => void;
   resetDraw: () => void;
   applyBalloonStarted: (payload: BalloonStartedPayload) => void;
-  applyBalloonPopped: (payload: BalloonPoppedPayload) => void;
+  applyBalloonPumped: (payload: BalloonPumpedPayload) => void;
+  applyBalloonPassed: (payload: BalloonPassedPayload) => void;
   resetBalloon: () => void;
   setRouletteDraft: (labels: string[]) => void;
   reset: () => void;
@@ -105,6 +109,7 @@ const initial = {
   status: 'waiting' as RoomStatus,
   gameType: null,
   participants: [] as string[],
+  readyPlayers: [] as string[],
   items: [] as Item[],
   result: null as GameResult | null,
   tally: [] as VoteTallyEntry[],
@@ -137,6 +142,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       status: state.status,
       gameType: state.gameType,
       participants: state.participants,
+      readyPlayers: state.ready ?? [],
       items: state.items,
       onlineCount: state.onlineCount,
       // 재접속/늦은 입장이면 진행 중 사다리를 그대로 복원.
@@ -152,6 +158,7 @@ export const useRoomStore = create<RoomState>((set) => ({
   setGameType: (gameType) => set({ gameType }),
   setItems: (items) => set({ items }),
   setParticipants: (participants) => set({ participants }),
+  setReadyPlayers: (readyPlayers) => set({ readyPlayers }),
   setResult: (result) => set({ result }),
   setTally: (tally) => set({ tally }),
   setOnlineCount: (onlineCount) => set({ onlineCount }),
@@ -217,6 +224,8 @@ export const useRoomStore = create<RoomState>((set) => ({
       balloon: {
         capacity: payload.capacity,
         pumps: 0,
+        turnPumps: 0,
+        maxPerTurn: payload.maxPerTurn,
         turnOrder: payload.turnOrder,
         turn: payload.turn,
         caughtBy: null,
@@ -224,8 +233,8 @@ export const useRoomStore = create<RoomState>((set) => ({
       balloonRound: s.balloonRound + 1,
       status: 'playing',
     })),
-  // 풍선 한 번 펌프 — 누적 펌프 수·턴·걸린 사람을 서버 값으로 갱신. balloon 없으면 무시.
-  applyBalloonPopped: (payload) =>
+  // 풍선 한 번 펌프 — 누적/이번 턴 펌프 수·턴·걸린 사람을 서버 값으로 갱신. balloon 없으면 무시.
+  applyBalloonPumped: (payload) =>
     set((s) => {
       if (!s.balloon) return s;
       // 늦게 도착한 옛 이벤트가 최신 펌프 수를 되돌리지 않게 한다(멱등·단조 증가).
@@ -234,11 +243,19 @@ export const useRoomStore = create<RoomState>((set) => ({
         balloon: {
           ...s.balloon,
           pumps: payload.pumps,
+          turnPumps: payload.turnPumps,
           turn: payload.turn,
           caughtBy: payload.caughtBy,
         },
       };
     }),
+  // '넘기기' — 다음 사람으로 턴이 넘어가고 그 턴의 펌프 수는 0으로 초기화. balloon 없으면 무시.
+  applyBalloonPassed: (payload) =>
+    set((s) =>
+      s.balloon
+        ? { balloon: { ...s.balloon, turn: payload.turn, turnPumps: 0 } }
+        : s,
+    ),
   resetBalloon: () => set({ balloon: null }),
 
   setRouletteDraft: (rouletteDraft) => set({ rouletteDraft }),

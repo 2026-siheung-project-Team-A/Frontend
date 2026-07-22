@@ -30,7 +30,16 @@ export const gameSocket = {
    * '게임 시작 ▶' — 아직 결과도 항목 편집도 안 끝났지만, 참가자를 대기 화면에서
    * 실제 게임 화면으로 옮겨 호스트가 목록을 채우는 과정을 실시간으로 보게 한다.
    */
-  beginGame: (socket: Socket) => socket.emit('game:begin'),
+  /**
+   * '게임 시작 ▶' — ack 를 기다리는 Promise. 이전 게임 참가자가 다 안 돌아왔으면
+   * {ok:false, code:'PLAYERS_NOT_READY'} 로 거절되므로, 호출부가 이 값으로 화면 전환을 막고 안내한다.
+   */
+  beginGame: (socket: Socket) =>
+    new Promise<{ ok: boolean; code?: string }>((resolve) => {
+      socket.emit('game:begin', (ack: { ok: boolean; code?: string }) =>
+        resolve(ack),
+      );
+    }),
   /** 즉시게임 실행. draw/balloon 은 options.count(뽑을 개수)를 넘길 수 있다. */
   startGame: (socket: Socket, options?: Record<string, unknown>) =>
     socket.emit('game:start', { options }),
@@ -74,8 +83,8 @@ export const gameSocket = {
       );
     }),
 
-  // 풍선 러시안룰렛(턴제) — host 가 풍선 크기를 정해 시작하고, 현재 턴 참가자가 가운데 풍선을 펌프한다.
-  //   시작은 balloon:started, 펌프는 balloon:popped 로 서버가 전원 broadcast(useRoomConnection 구독).
+  // 풍선 러시안룰렛(턴제) — host 도 참가한다. 현재 턴 참가자가 자기 턴에 최대 3번 펌프하고 '넘기기'로 넘긴다.
+  //   시작은 balloon:started, 펌프는 balloon:pumped, 넘기기는 balloon:passed 로 전원 broadcast(useRoomConnection 구독).
   /**
    * 풍선 게임 시작(host) — ack 를 기다리는 Promise. 참가자가 2명 미만이면
    * {ok:false, code:'NEED_MORE_PLAYERS'} 로 거절되므로, 호출부가 이 값으로 안내를 띄운다.
@@ -90,12 +99,23 @@ export const gameSocket = {
       );
     }),
   /**
-   * 풍선 펌프 — ack 를 기다리는 Promise. 내 턴이 아니면 {ok:false, code:'NOT_YOUR_TURN'} 로 거절된다.
-   * 성공 시 결과(누적 펌프·다음 턴·걸림 여부)는 balloon:popped broadcast 로 반영된다.
+   * 풍선 펌프 — ack 를 기다리는 Promise. 내 턴이 아니면 {ok:false, code:'NOT_YOUR_TURN'},
+   * 이번 턴 상한(3회) 도달 시 {ok:false, code:'PUMP_LIMIT'} 로 거절된다. 결과(누적/이번 턴 펌프 수·
+   * 걸림 여부)는 balloon:pumped broadcast 로 반영된다. 펌프해도 턴은 유지된다(자동으로 안 넘어감).
    */
-  popBalloon: (socket: Socket) =>
+  pumpBalloon: (socket: Socket) =>
     new Promise<{ ok: boolean; code?: string }>((resolve) => {
-      socket.emit('balloon:pop', {}, (ack: { ok: boolean; code?: string }) =>
+      socket.emit('balloon:pump', {}, (ack: { ok: boolean; code?: string }) =>
+        resolve(ack),
+      );
+    }),
+  /**
+   * '넘기기' — 1번 이상 펌프한 뒤 다음 사람에게 턴을 넘긴다. 아직 안 펌프했으면
+   * {ok:false, code:'PUMP_FIRST'} 로 거절된다. 결과는 balloon:passed broadcast 로 반영된다.
+   */
+  passBalloon: (socket: Socket) =>
+    new Promise<{ ok: boolean; code?: string }>((resolve) => {
+      socket.emit('balloon:pass', {}, (ack: { ok: boolean; code?: string }) =>
         resolve(ack),
       );
     }),

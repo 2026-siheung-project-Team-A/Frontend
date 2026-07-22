@@ -1003,6 +1003,11 @@ input {
 .lg-top.is-on {
   border-width: 2px;
 }
+/* 이미 누른(비활성) 시작칸 — 색은 지우고 흐리게 표시(다시 못 누름). 사다리엔 활성 한 색만 남는다. */
+.lg-top.is-used {
+  opacity: 0.5;
+  background: #f2f2f7;
+}
 
 /* 도착칸(하단) */
 .lg-bottom {
@@ -1020,6 +1025,11 @@ input {
   background: #fff7e6;
   border-color: #f5a623;
   font-weight: 700;
+}
+/* 이미 사용된 도착칸 — 위 목록의 '사용됨'과 같은 회색 톤(노란색은 활성 하나만 남는다). */
+.lg-bottom.is-used {
+  opacity: 0.5;
+  background: #f2f2f7;
 }
 
 /* 사다리 캔버스(세로줄·가로줄·경로) */
@@ -1044,7 +1054,8 @@ input {
   stroke-linejoin: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: lg-draw 1.1s ease forwards;
+  /* linear = 내려오는 속도 일정. 시간은 경로 길이에 비례해 인라인(animationDuration)으로 덮어쓴다. */
+  animation: lg-draw 1.6s linear forwards;
 }
 @keyframes lg-draw {
   to {

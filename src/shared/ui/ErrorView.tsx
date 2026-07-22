@@ -47,17 +47,32 @@ const MESSAGES: Record<ErrorCode, { emoji: string; title: string; desc: string }
   NEED_MORE_PLAYERS: {
     emoji: '👥',
     title: '참가자가 더 필요해요',
-    desc: '풍선 게임은 참가자가 2명 이상이어야 시작할 수 있어요.',
+    desc: '풍선 게임은 호스트 포함 2명 이상이어야 시작할 수 있어요.',
   },
   NOT_YOUR_TURN: {
     emoji: '⏳',
     title: '아직 내 차례가 아니에요',
-    desc: '내 차례가 되면 풍선을 터뜨릴 수 있어요.',
+    desc: '내 차례가 되면 풍선을 펌프하거나 넘길 수 있어요.',
+  },
+  PUMP_LIMIT: {
+    emoji: '💨',
+    title: '이번 턴엔 다 펌프했어요',
+    desc: '한 턴에 최대 3번까지 펌프할 수 있어요. 다음 사람에게 넘겨 주세요.',
+  },
+  PUMP_FIRST: {
+    emoji: '💨',
+    title: '먼저 펌프해 주세요',
+    desc: '한 번 이상 펌프한 뒤에 다음 사람에게 넘길 수 있어요.',
   },
   ROOM_LOCKED: {
     emoji: '🚪',
     title: '게임이 진행 중이에요',
     desc: '지금은 입장할 수 없어요. 게임이 끝난 뒤 다시 입장해 주세요.',
+  },
+  PLAYERS_NOT_READY: {
+    emoji: '⌛',
+    title: '아직 다 안 돌아왔어요',
+    desc: '이전 게임 참가자가 모두 방으로 돌아오면 새 게임을 시작할 수 있어요.',
   },
   VALIDATION_ERROR: {
     emoji: '⚠️',
