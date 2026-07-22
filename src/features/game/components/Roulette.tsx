@@ -63,6 +63,7 @@ export function Roulette({
   const [landed, setLanded] = useState(false);
   const finishedRef = useRef(false);
   const spunFor = useRef<string | null>(null);
+  const landTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editable = isHost && phase === 'setup';
 
@@ -114,19 +115,29 @@ export function Roulette({
     const raf = requestAnimationFrame(() =>
       setRotation((r) => r - (r % 360) + target),
     );
-    return () => cancelAnimationFrame(raf);
+    // 착지(당첨 표시 + 당첨음)를 '실제 회전 시작' 기준 7초로 예약한다 — winner 도착이 아니라 스핀 시작에
+    // 맞춰, 참가자(항목 동기화가 한 박자 늦을 수 있음)도 호스트와 소리·화면이 똑같이 맞는다.
+    // ref 에 담아 items/seg 변화로 이 effect 가 재실행돼도(아래 early-return) 타이머가 취소되지 않게 한다.
+    if (landTimer.current) clearTimeout(landTimer.current);
+    landTimer.current = setTimeout(done, SPIN_MS);
+    return () => cancelAnimationFrame(raf); // 착지 타이머는 여기서 지우지 않는다(재실행에 살아남게).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [winner, items, seg, editable, isHost]);
 
-  // 당첨 착지 — 회전이 7초 고정이라, winner 확정 후 정확히 7초에 착지(당첨 표시 + 당첨음)한다.
-  // transitionend 이벤트에 의존하지 않아, 회전 중간에 소리가 새는 일이 없다(고정 타이머 하나만).
-  // deps 를 [winner, editable] 로 좁혀, items/seg 변화로 재실행돼 타이머가 취소·재스케줄되지 않게 한다.
+  // 착지 타이머 정리 — 새 라운드(winner 비움)나 언마운트 시. (재실행이 아니라 이 시점에만 취소한다.)
   useEffect(() => {
-    if (editable || !winner) return;
-    const id = setTimeout(done, SPIN_MS);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [winner, editable]);
+    if (winner) return;
+    if (landTimer.current) {
+      clearTimeout(landTimer.current);
+      landTimer.current = null;
+    }
+  }, [winner]);
+  useEffect(
+    () => () => {
+      if (landTimer.current) clearTimeout(landTimer.current);
+    },
+    [],
+  );
 
   // '같은 항목으로 다시하기'(winner 초기화) → 셋업 복귀 (slots는 유지해 그대로 다시 돌릴 수 있게)
   useEffect(() => {
