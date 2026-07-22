@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import type { GameType } from '../../../shared/types/api';
-import { Screen, Button, TopBar, GameIcon, CrownIcon } from '../../../shared/ui';
+import { Screen, Button, TopBar, GameIcon, CrownIcon, CopyIcon } from '../../../shared/ui';
 import { mascotFor } from '../../../shared/lib/mascot';
+import { useRoomStore } from '../store/roomStore';
 
 /** 로비에서 바로 고르는 6종 게임 (호스트: 인라인 전환 / 참가자: 현재 게임 표시) */
 const GAMES: { type: GameType; label: string }[] = [
@@ -80,6 +81,16 @@ export function GameLobby({
     };
   }, [joinUrl]);
 
+  // 참여 코드 복사 — 클립보드에 방 코드를 넣고 토스트로 알린다(RoomToast).
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId);
+      useRoomStore.getState().pushNotice('참여 코드를 복사했어요');
+    } catch {
+      useRoomStore.getState().pushNotice('복사에 실패했어요. 직접 코드를 입력해 주세요.');
+    }
+  };
+
   const live = onlineCount || participants.length + (isHost ? 1 : 0);
   const emptySlots = Math.max(0, MIN_SLOTS - (participants.length + 1));
 
@@ -117,6 +128,15 @@ export function GameLobby({
       <div className="lobby-head">
         <span className="lobby-code">
           참여 코드 <b>{roomId}</b>
+          <button
+            type="button"
+            className="lobby-copy"
+            onClick={copyCode}
+            aria-label="참여 코드 복사"
+            title="참여 코드 복사"
+          >
+            <CopyIcon size={15} />
+          </button>
         </span>
         <span className="lobby-live">
           <i className="lobby-dot" aria-hidden="true" />

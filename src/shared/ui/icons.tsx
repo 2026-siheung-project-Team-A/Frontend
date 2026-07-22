@@ -207,6 +207,16 @@ export function TrashIcon(props: IconProps) {
   );
 }
 
+/** 복사 — 겹친 두 문서(앞장 + 뒤에 살짝 보이는 문서). currentColor 라인 아이콘. */
+export function CopyIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M15.5 5.5 H6.5 A2 2 0 0 0 4.5 7.5 V16.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="8.5" y="8.5" width="11" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    </Svg>
+  );
+}
+
 /** GameType → 게임 아이콘 매핑. */
 export function GameIcon({
   type,

@@ -19,4 +19,5 @@ export {
   LockIcon,
   TrophyIcon,
   TrashIcon,
+  CopyIcon,
 } from './icons';
