@@ -108,6 +108,36 @@ export function GameLobby({
     }
   };
 
+  // QR 이미지 다운로드 — data URL(qr)을 그대로 파일로 저장한다.
+  const downloadQr = () => {
+    if (!qr) return;
+    const a = document.createElement('a');
+    a.href = qr;
+    a.download = `pickmenow-${roomId}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    useRoomStore.getState().pushNotice('QR 이미지를 저장했어요');
+  };
+
+  // QR 이미지 복사 — 클립보드에 PNG 를 넣는다. 이미지 복사를 지원 안 하는 브라우저면
+  // 참여 링크(joinUrl)를 대신 복사한다.
+  const copyQr = async () => {
+    if (!qr) return;
+    try {
+      const blob = await (await fetch(qr)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      useRoomStore.getState().pushNotice('QR 이미지를 복사했어요');
+    } catch {
+      try {
+        if (joinUrl) await navigator.clipboard.writeText(joinUrl);
+        useRoomStore.getState().pushNotice('참여 링크를 복사했어요');
+      } catch {
+        useRoomStore.getState().pushNotice('복사에 실패했어요');
+      }
+    }
+  };
+
   const live = onlineCount || participants.length + (isHost ? 1 : 0);
   const emptySlots = Math.max(0, MIN_SLOTS - (participants.length + 1));
 
@@ -285,10 +315,27 @@ export function GameLobby({
 
             <div className="lobby-qr-code">
               참여 코드 <b>{roomId}</b>
+              <button
+                type="button"
+                className="lobby-copy"
+                onClick={copyCode}
+                aria-label="참여 코드 복사"
+                title="참여 코드 복사"
+              >
+                <CopyIcon size={15} />
+              </button>
             </div>
             {joinUrl && <p className="lobby-qr-url">{joinUrl}</p>}
 
             <div className="modal-actions">
+              <div className="grid-2" style={{ marginBottom: 8 }}>
+                <Button variant="secondary" onClick={copyQr} disabled={!qr}>
+                  QR 복사
+                </Button>
+                <Button variant="secondary" onClick={downloadQr} disabled={!qr}>
+                  QR 다운로드
+                </Button>
+              </div>
               <Button block onClick={() => setQrOpen(false)}>
                 닫기
               </Button>
