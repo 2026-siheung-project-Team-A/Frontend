@@ -7,6 +7,7 @@ import { useRoomStore } from '../../features/room/store/roomStore';
 import { RoomClosedModal } from '../../features/room/components/RoomClosedModal';
 import { CreateRoomModal } from '../../features/room/components/CreateRoomModal';
 import { Screen, Button } from '../../shared/ui';
+import { SoundToggle } from '../../shared/ui/SoundToggle';
 import {
   RouletteIcon,
   BalloonIcon,
@@ -81,7 +82,11 @@ export function HomePage() {
   return (
     <>
       <Screen>
-        <p className="brand">Pick Me Now</p>
+        {/* 브랜드 줄 — "Pick Me Now" 와 효과음 토글을 같은 선상에 둔다. */}
+        <div className="brand-row">
+          <p className="brand">Pick Me Now</p>
+          <SoundToggle floating={false} />
+        </div>
 
         <div className="home-headline">
           <h1 className="title">오늘 뭐 정할까요?</h1>

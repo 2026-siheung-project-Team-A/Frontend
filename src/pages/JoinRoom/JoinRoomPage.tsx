@@ -6,6 +6,7 @@ import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import type { ErrorCode } from '../../shared/types/api';
 import { Screen, Button, Loading, ErrorView, GoHomeButton, LockIcon } from '../../shared/ui';
+import { homePath } from '../../shared/lib/embed';
 
 const PIN_MAX = 6;
 
@@ -96,7 +97,7 @@ export function JoinRoomPage() {
             <Button block onClick={() => void refetch()} disabled={isFetching}>
               다시 시도
             </Button>
-            <GoHomeButton onClick={() => navigate('/')} />
+            <GoHomeButton onClick={() => navigate(homePath())} />
           </div>
         }
       />

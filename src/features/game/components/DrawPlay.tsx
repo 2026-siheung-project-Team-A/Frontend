@@ -340,7 +340,7 @@ export function DrawPlay({
   );
 }
 
-/** 스텝퍼 — label [＋] value·unit [－] (스크린샷 순서: +가 왼쪽, −가 오른쪽) */
+/** 스텝퍼 — label [－] value·unit [＋] (−가 왼쪽, +가 오른쪽) */
 function Stepper({
   label,
   value,
@@ -361,12 +361,12 @@ function Stepper({
   return (
     <div className="jb-step">
       <span className="jb-step-label">{label}</span>
-      <button type="button" onClick={onInc} disabled={incDisabled} aria-label={`${label} 늘리기`}>＋</button>
+      <button type="button" onClick={onDec} disabled={decDisabled} aria-label={`${label} 줄이기`}>－</button>
       <b className="jb-step-val">
         {value}
         {unit}
       </b>
-      <button type="button" onClick={onDec} disabled={decDisabled} aria-label={`${label} 줄이기`}>－</button>
+      <button type="button" onClick={onInc} disabled={incDisabled} aria-label={`${label} 늘리기`}>＋</button>
     </div>
   );
 }

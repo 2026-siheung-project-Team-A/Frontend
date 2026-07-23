@@ -18,6 +18,7 @@ import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
 import { ErrorView, GoHomeButton } from '../../shared/ui';
+import { homePath } from '../../shared/lib/embed';
 
 /** 게임이 끝난 뒤 방으로 돌아오지 않으면 강퇴되기까지의 시간(ms). */
 const RETURN_GRACE_MS = 60_000;
@@ -149,7 +150,8 @@ export function GameRoomPage() {
 
   const goHome = () => {
     useRoomStore.getState().reset();
-    navigate('/');
+    // 임베드(익스텐션·Zoom·Meet)면 전체 홈이 아니라 임베드 런처(/embed)로 돌아간다.
+    navigate(homePath());
   };
 
   // 나가기 — room:leave 로 실제 퇴장 처리 후 홈으로. 나가는 본인에게는 "방에서 나왔습니다"를 띄운다
@@ -188,7 +190,7 @@ export function GameRoomPage() {
         <ErrorView
           title="게임이 진행 중이에요"
           desc="지금은 입장할 수 없어요. 게임이 끝난 뒤 다시 입장해 주세요."
-          action={<GoHomeButton onClick={() => navigate('/')} />}
+          action={<GoHomeButton onClick={() => navigate(homePath())} />}
         />
       );
     }
@@ -203,7 +205,7 @@ export function GameRoomPage() {
     return (
       <ErrorView
         code={roomError}
-        action={<GoHomeButton onClick={() => navigate('/')} />}
+        action={<GoHomeButton onClick={() => navigate(homePath())} />}
       />
     );
   }

@@ -19,6 +19,7 @@ import { VoteResult } from '../../features/game/components/results/VoteResult';
 import { LadderResult } from '../../features/game/components/results/LadderResult';
 import { ResultModal } from '../../features/game/components/results/ResultModal';
 import { Loading, Button } from '../../shared/ui';
+import { homePath } from '../../shared/lib/embed';
 
 type Phase = 'select' | 'qr' | 'play';
 
@@ -133,7 +134,7 @@ export function HostRoomPage() {
     const s = socketRef.current;
     if (connected && s) roomSocket.close(s);
     useRoomStore.getState().reset();
-    navigate('/');
+    navigate(homePath());
   };
 
   // 항목 추가/삭제 — 게임 화면 위 ItemEditor에서 한 번에 하나씩 커밋된다(사람이 타이핑하는
@@ -313,7 +314,8 @@ export function HostRoomPage() {
 
   const goHome = () => {
     useRoomStore.getState().reset();
-    navigate('/');
+    // 임베드(익스텐션·Zoom·Meet)면 전체 홈이 아니라 임베드 런처(/embed)로 돌아간다.
+    navigate(homePath());
   };
 
   // 첫 화면(아직 게임도 안 고른 상태)에서 나가기 — 방은 여기서만 실제로 삭제된다(방금 만들고 나가기).
