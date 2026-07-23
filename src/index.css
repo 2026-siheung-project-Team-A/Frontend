@@ -1480,6 +1480,19 @@ input {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+/* 좁은 폭(크롬 사이드 패널·작은 폰)에서는 두 스텝퍼(제비 수 / 꽝 개수)를 한 줄에 나란히
+   두면 고정폭 버튼·값이 넘쳐 잘린다. 세로로 쌓고 구분선을 가로선으로 바꿔 항상 들어맞게 한다. */
+@media (max-width: 400px) {
+  .jb-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .jb-div {
+    width: 100%;
+    height: 1px;
+    align-self: auto;
+  }
+}
 
 /* 크림/나무결 패널 */
 .jb-panel {
