@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Pick Me Now",
+  "version": "0.1.0",
+  "description": "회의·수업에서 바로 정하는 실시간 미니게임 — 룰렛·투표·제비뽑기·풍선·사다리·순서 정하기.",
+  "action": {
+    "default_title": "Pick Me Now 열기"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "permissions": ["sidePanel"]
+}

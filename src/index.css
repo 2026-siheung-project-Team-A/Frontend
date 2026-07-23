@@ -2246,3 +2246,48 @@ input {
     animation: none;
   }
 }
+
+/* ── 임베드 호스트 런처(/embed) — 패널(iframe/웹뷰) 안에서 게임을 고르는 카드 그리드 ── */
+.embed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.embed-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+.embed-card:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+.embed-card:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.embed-card:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.embed-card-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+.embed-card-desc {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
