@@ -5,6 +5,7 @@ import { roomApi } from '../../features/room/api/roomApi';
 import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { Screen, Button, GameIcon } from '../../shared/ui';
+import { SoundToggle } from '../../shared/ui/SoundToggle';
 import type { CreateRoomInput, GameType } from '../../shared/types/api';
 
 /**
@@ -59,7 +60,11 @@ export function EmbedPage() {
 
   return (
     <Screen>
-      <p className="brand">Pick Me Now</p>
+      {/* 브랜드 줄 — "Pick Me Now" 와 효과음 토글을 같은 선상에 둔다(홈과 동일). */}
+      <div className="brand-row">
+        <p className="brand">Pick Me Now</p>
+        <SoundToggle floating={false} />
+      </div>
 
       <div className="home-headline">
         <h1 className="title">회의에서 바로 정해요</h1>

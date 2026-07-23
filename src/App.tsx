@@ -26,7 +26,8 @@ import { NotFoundPage } from './pages/NotFound/NotFoundPage';
  */
 function GlobalSoundToggle() {
   const { pathname } = useLocation();
-  if (pathname === '/') return null;
+  // 홈('/')·임베드 런처('/embed')는 브랜드 줄에 인라인 토글을 직접 두므로 여기선 숨긴다(중복 방지).
+  if (pathname === '/' || pathname === '/embed') return null;
   return <SoundToggle />;
 }
 
