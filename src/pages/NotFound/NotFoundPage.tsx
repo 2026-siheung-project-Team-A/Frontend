@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ErrorView, GoHomeButton } from '../../shared/ui';
+import { homePath } from '../../shared/lib/embed';
 
 /**
  * 방 없음 / 만료 / 잘못된 주소.
@@ -9,6 +10,6 @@ import { ErrorView, GoHomeButton } from '../../shared/ui';
 export function NotFoundPage() {
   const navigate = useNavigate();
   return (
-    <ErrorView code="ROOM_NOT_FOUND" action={<GoHomeButton onClick={() => navigate('/')} />} />
+    <ErrorView code="ROOM_NOT_FOUND" action={<GoHomeButton onClick={() => navigate(homePath())} />} />
   );
 }

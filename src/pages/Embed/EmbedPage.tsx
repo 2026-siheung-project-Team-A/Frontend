@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
 import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
-import { Screen, GameIcon } from '../../shared/ui';
+import { Screen, Button, GameIcon } from '../../shared/ui';
 import type { CreateRoomInput, GameType } from '../../shared/types/api';
 
 /**
@@ -28,6 +29,14 @@ const GAMES: { type: GameType; label: string; desc: string }[] = [
 
 export function EmbedPage() {
   const navigate = useNavigate();
+  const [code, setCode] = useState('');
+
+  // 참여 코드로 입장 — 진행자가 아니라 이 기기로 직접 참가할 때. 홈(/)과 같은 규칙으로
+  // 코드를 정규화(앞의 # 제거·대문자)한 뒤 참가자 입장 경로(/r/:code)로 보낸다.
+  const enter = () => {
+    const c = code.trim().replace(/^#/, '').toUpperCase();
+    if (c) navigate(`/r/${c}`);
+  };
 
   const create = useMutation({
     mutationFn: (input: CreateRoomInput) => roomApi.create(input),
@@ -75,6 +84,23 @@ export function EmbedPage() {
 
       {create.isPending && <p className="center muted">방을 만드는 중…</p>}
       {err && <p className="center field-error">{err}</p>}
+
+      {/* 코드로 입장하기 — 진행자가 아니라 이 기기로 직접 참가할 때(홈과 동일한 입력). */}
+      <p className="center muted" style={{ fontSize: 14, marginTop: 'auto' }}>또는</p>
+      <div className="home-join">
+        <input
+          className="input"
+          placeholder="참여 코드로 입장"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && enter()}
+          inputMode="text"
+          autoCapitalize="characters"
+        />
+        <Button variant="secondary" block={false} onClick={enter} style={{ flexShrink: 0 }}>
+          입장
+        </Button>
+      </div>
     </Screen>
   );
 }

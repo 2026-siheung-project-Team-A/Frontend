@@ -158,6 +158,12 @@ input {
 /* -------------------------------------------------------------------------
    타이포
    ------------------------------------------------------------------------- */
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
 .brand {
   font-size: 30px;
   font-weight: 800;
@@ -1426,7 +1432,7 @@ input {
 }
 
 /* ── 제비뽑기(인터랙티브) — DrawPlay.tsx 전용(.jb-*) ─────────────────── */
-/* 상단 스텝퍼 바: 인원수 | 꽝 개수 (스크린샷: +가 왼쪽, −가 오른쪽) */
+/* 상단 스텝퍼 바: 인원수 | 꽝 개수 (−가 왼쪽, +가 오른쪽) */
 .jb-controls {
   display: flex;
   align-items: center;

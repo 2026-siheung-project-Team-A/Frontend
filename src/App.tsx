@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AppShell, DisconnectBanner, RoomToast } from './shared/ui';
 import { SoundToggle } from './shared/ui/SoundToggle';
 import { useGameSounds } from './shared/lib/useGameSounds';
@@ -20,6 +20,16 @@ import { NotFoundPage } from './pages/NotFound/NotFoundPage';
  * 모든 페이지는 AppShell(모바일 프레임) 안에서 렌더되고,
  * DisconnectBanner가 소켓 끊김을 상단에 상시 알린다.
  */
+/**
+ * 전역(플로팅) 효과음 토글 — 대부분의 화면 우상단에 떠 있다.
+ * 홈('/')은 브랜드 줄("Pick Me Now")에 인라인 토글을 직접 두므로 여기선 숨긴다(중복 방지).
+ */
+function GlobalSoundToggle() {
+  const { pathname } = useLocation();
+  if (pathname === '/') return null;
+  return <SoundToggle />;
+}
+
 function App() {
   // 게임 효과음 — store 변화를 관찰해 서버 이벤트 시점에 게임별 소리를 낸다(전역 1회 배선).
   useGameSounds();
@@ -27,7 +37,7 @@ function App() {
     <BrowserRouter>
       <AppShell>
         <DisconnectBanner />
-        <SoundToggle />
+        <GlobalSoundToggle />
         <RoomToast />
         <Routes>
           <Route path="/" element={<HomePage />} />
