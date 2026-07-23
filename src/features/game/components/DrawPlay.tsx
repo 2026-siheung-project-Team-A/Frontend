@@ -38,7 +38,7 @@ const LOTS = [
 function Jebi({ index }: { index: number }) {
   const { face, edge } = LOTS[index % LOTS.length];
   return (
-    <svg className="jebi-svg" viewBox="0 0 72 92" aria-hidden="true">
+    <svg className="jb-svg" viewBox="0 0 72 92" aria-hidden="true">
       <g transform="rotate(9 36 46)">
         {/* 아래로 접힌 꼬리 */}
         <path
