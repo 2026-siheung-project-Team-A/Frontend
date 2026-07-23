@@ -61,7 +61,8 @@
   text-rendering: optimizeLegibility;
 }
 
-@media (prefers-color-scheme: dark) {
+/* 라이트 고정: (max-width:0px)은 실제 뷰포트에서 절대 매치되지 않아 다크 오버라이드가 꺼진다. */
+@media (prefers-color-scheme: dark) and (max-width: 0px) {
   :root {
     --bg: #0f1115;
     --surface: #161a20;
@@ -433,7 +434,8 @@ input {
     rgba(255, 255, 255, 0) 70%
   );
 }
-@media (prefers-color-scheme: dark) {
+/* 라이트 고정: 아래 조건은 절대 매치되지 않아 비활성. */
+@media (prefers-color-scheme: dark) and (max-width: 0px) {
   .home-hero-glow {
     background: radial-gradient(
       circle,
@@ -1668,8 +1670,8 @@ input {
   }
 }
 
-/* 다크 테마 — 패널만 톤 다운(제비 색은 유지) */
-@media (prefers-color-scheme: dark) {
+/* 라이트 고정: 아래 조건은 절대 매치되지 않아 비활성(다크 패널 톤다운 끔). */
+@media (prefers-color-scheme: dark) and (max-width: 0px) {
   .jb-panel {
     background:
       repeating-linear-gradient(
