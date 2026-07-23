@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.3",
+    "@zoom/appssdk": "^0.16.40",
     "axios": "^1.18.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
