@@ -152,10 +152,12 @@ export function GameRoomPage() {
     navigate('/');
   };
 
-  // 나가기 — room:leave 로 실제 퇴장 처리 후 홈으로.
+  // 나가기 — room:leave 로 실제 퇴장 처리 후 홈으로. 나가는 본인에게는 "방에서 나왔습니다"를 띄운다
+  // (남은 사람들에게는 서버 participant:left 로 "OO님이 방에서 나갔어요"가 따로 뜬다).
   const leaveRoom = () => {
     const s = socketRef.current;
     if (s) roomSocket.leave(s);
+    useRoomStore.getState().pushNotice('방에서 나왔습니다');
     goHome();
   };
 
