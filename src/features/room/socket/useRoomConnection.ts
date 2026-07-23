@@ -131,7 +131,8 @@ export function useRoomConnection(
     // 새 라운드 시작 — 이전 라운드 잔여물(결과·집계·사다리·제비·원판 초안)을 먼저 지운다.
     // 안 그러면 아직 방으로 안 돌아온 참가자 화면에 옛 결과 모달이 새 게임 위에 남고,
     // 강퇴 타이머가 안 꺼지며, 룰렛 당첨자가 옛 값으로 오염된다.
-    const startRound = () => {
+    // 이전 라운드 잔여물(결과·집계·사다리·제비·풍선·초안)만 지운다 — 화면 전환(status)은 분리.
+    const resetRound = () => {
       const st = useRoomStore.getState();
       st.setResult(null);
       st.setTally([]);
@@ -141,18 +142,27 @@ export function useRoomConnection(
       st.resetBalloon();
       st.setRouletteDraft([]);
       st.setOrderDraft('');
-      st.setStatus('playing');
+    };
+    const startRound = () => {
+      resetRound();
+      useRoomStore.getState().setStatus('playing');
     };
     socket.on('game:started', startRound);
     // '게임 시작 ▶' — 서버가 준 startAt 까지 전원이 로비에 머문 채 'N초 뒤 게임으로 들어가요'
     // 카운트다운을 함께 본다(각자 로컬 시계로 동기화). 0이 되면 그제야 실제 게임 화면으로 전환한다.
+    //
+    // 중요: 리셋(resetBalloon 등)은 '즉시' 하고, 화면 전환(status='playing')만 카운트다운 종료로 미룬다.
+    // 예전엔 리셋도 지연 setTimeout 안에서 돌아, 카운트다운 직후 도착하는 게임 시작 이벤트(balloon:started 등)를
+    // 늦게 실행된 리셋이 나중에 덮어(null) 참가자가 "곧 게임이 시작돼요" 대기 화면에 갇혔다
+    // — 특히 모바일은 setTimeout 스로틀링으로 리셋이 balloon:started 뒤에 실행되기 쉬웠다.
     let beginTimer: ReturnType<typeof setTimeout> | null = null;
     socket.on('game:begin', (p?: { gameType?: RoomStatePayload['gameType']; startAt?: number }) => {
       const startAt = typeof p?.startAt === 'number' ? p.startAt : Date.now();
+      resetRound(); // 즉시 리셋 — 곧 도착할 시작 이벤트를 지연 리셋이 덮지 않게
       useRoomStore.getState().setCountdownStartAt(startAt);
       if (beginTimer) clearTimeout(beginTimer);
       beginTimer = setTimeout(() => {
-        startRound();
+        useRoomStore.getState().setStatus('playing'); // 화면 전환만 카운트다운 종료 시
         useRoomStore.getState().setCountdownStartAt(null);
       }, Math.max(0, startAt - Date.now()));
     });
