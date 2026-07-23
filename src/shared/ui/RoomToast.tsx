@@ -7,7 +7,7 @@ import { useRoomStore } from '../../features/room/store/roomStore';
  *
  * index.css 를 건드리지 않도록 스타일은 인라인으로 두고, 나타남/사라짐은 visible 상태로 트랜지션한다.
  */
-const SHOW_MS = 3200; // 화면에 머무는 시간
+const SHOW_MS = 3000; // 화면에 머무는 시간(3초 뒤 사라짐)
 const FADE_MS = 260; // 사라지는 트랜지션 시간
 
 export function RoomToast() {
