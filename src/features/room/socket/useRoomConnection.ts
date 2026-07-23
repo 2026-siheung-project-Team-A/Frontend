@@ -44,6 +44,9 @@ export function useRoomConnection(
   // 한 번이라도 연결에 성공했는지. 최초 연결 전의 connect_error(백엔드 미기동 등)는
   // 빨간 배너 대신 조용한 'connecting'으로 두고, 실제 끊김(연결 후 드롭)에만 경고한다.
   const everConnected = useRef(false);
+  // 내 닉네임 사본. 나가기(goHome→reset)가 store 닉네임을 먼저 비워도, 뒤이어 도착하는
+  // 내 자신의 participant:left 를 '남'으로 오인해 "내이름님이 나갔어요"가 뜨는 걸 막는다.
+  const myNickRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!roomId) return;
@@ -69,6 +72,7 @@ export function useRoomConnection(
       // 비밀방이면 joinPassword 를 함께 실어 보낸다(자유방이면 undefined).
       const { nickname, joinPassword } = useRoomStore.getState();
       if (role === 'participant' && nickname) {
+        myNickRef.current = nickname; // 내 자신 판별용 사본(reset 에도 안 지워진다)
         socket.emit(
           'room:join',
           { nickname, password: joinPassword ?? undefined },
@@ -101,8 +105,9 @@ export function useRoomConnection(
       const st = useRoomStore.getState();
       st.setParticipants(p.participants);
       // 누군가 방을 떠나면(직접 나가기 / 게임 후 60초 미복귀 자동강퇴) 남은 사람들에게 잠깐 알린다.
-      // 내가 나가는 경우는 이미 화면을 벗어나므로 내 닉네임이면 띄우지 않는다.
-      if (p.nickname && p.nickname !== st.nickname) {
+      // 내가 나가는 경우는 "방에서 나왔습니다"를 나가는 쪽(leaveRoom)에서 직접 띄우므로 여기선 건너뛴다.
+      // (store 닉네임은 reset 으로 먼저 비워질 수 있어, 지워지지 않는 myNickRef 로 내 자신을 판별한다.)
+      if (p.nickname && p.nickname !== myNickRef.current) {
         st.pushNotice(`${p.nickname}님이 방에서 나갔어요`);
       }
     });
