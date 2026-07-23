@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { roomApi } from '../../features/room/api/roomApi';
@@ -6,6 +6,7 @@ import { getApiErrorCode } from '../../shared/lib/apiError';
 import { useRoomStore } from '../../features/room/store/roomStore';
 import { Screen, Button, GameIcon } from '../../shared/ui';
 import { SoundToggle } from '../../shared/ui/SoundToggle';
+import { initZoomApp } from '../../shared/lib/zoom';
 import type { CreateRoomInput, GameType } from '../../shared/types/api';
 
 /**
@@ -31,6 +32,12 @@ const GAMES: { type: GameType; label: string; desc: string }[] = [
 export function EmbedPage() {
   const navigate = useNavigate();
   const [code, setCode] = useState('');
+
+  // Zoom 클라이언트 안에서 열렸으면 Zoom Apps SDK를 초기화한다(밖이면 무해하게 무시).
+  // config()는 SDK의 첫 호출이어야 하므로 진입 화면인 여기서 마운트 시 한 번 실행한다.
+  useEffect(() => {
+    void initZoomApp();
+  }, []);
 
   // 참여 코드로 입장 — 진행자가 아니라 이 기기로 직접 참가할 때. 홈(/)과 같은 규칙으로
   // 코드를 정규화(앞의 # 제거·대문자)한 뒤 참가자 입장 경로(/r/:code)로 보낸다.
