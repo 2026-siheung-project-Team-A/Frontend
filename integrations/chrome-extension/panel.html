@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pick Me Now</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #ffffff;
+      }
+      /* 게임 로직·UI는 전부 웹앱(www.pickmenow.co.kr)에서 로드한다.
+         익스텐션은 그 URL을 패널 크기에 꽉 채워 띄우는 얇은 껍데기일 뿐이라,
+         앞으로 웹앱을 배포하면 이 패널에도 자동 반영된다. */
+      iframe {
+        display: block;
+        border: 0;
+        width: 100%;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe
+      src="https://www.pickmenow.co.kr/embed"
+      allow="clipboard-write; clipboard-read; fullscreen"
+      referrerpolicy="strict-origin"
+    ></iframe>
+  </body>
+</html>

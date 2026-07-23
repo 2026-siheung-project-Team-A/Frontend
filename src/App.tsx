@@ -3,6 +3,7 @@ import { AppShell, DisconnectBanner, RoomToast } from './shared/ui';
 import { SoundToggle } from './shared/ui/SoundToggle';
 import { useGameSounds } from './shared/lib/useGameSounds';
 import { HomePage } from './pages/Home/HomePage';
+import { EmbedPage } from './pages/Embed/EmbedPage';
 import { HostRoomPage } from './pages/HostRoom/HostRoomPage';
 import { JoinRoomPage } from './pages/JoinRoom/JoinRoomPage';
 import { GameRoomPage } from './pages/GameRoom/GameRoomPage';
@@ -30,6 +31,7 @@ function App() {
         <RoomToast />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/embed" element={<EmbedPage />} />
           <Route path="/host/:roomId" element={<HostRoomPage />} />
           <Route path="/r/:roomId" element={<JoinRoomPage />} />
           <Route path="/game/:roomId" element={<GameRoomPage />} />
