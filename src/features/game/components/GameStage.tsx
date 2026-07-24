@@ -20,6 +20,84 @@ const META: Record<
   ladder: { title: '사다리타기', hint: '항목을 무작위로 이어요', action: '사다리 타기', busy: '내려가는 중…' },
 };
 
+/**
+ * 순서 정하기 — 칩(동그라미) 하나.
+ * editable(호스트·시작 전)이면 칩을 눌러 라벨을 수정하고(blur/Enter 커밋, 빈 값 원복, Esc 취소)
+ * ✕ 로 삭제할 수 있다. 참가자·시작 후에는 읽기 전용 칩으로 보여준다.
+ */
+function OrderChip({
+  item,
+  editable,
+  onEdit,
+  onRemove,
+}: {
+  item: Item;
+  editable: boolean;
+  onEdit?: (id: string, label: string) => void;
+  onRemove?: (id: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(item.label);
+  useEffect(() => setVal(item.label), [item.label]);
+
+  if (!editable) return <span className="order-chip">{item.label}</span>;
+
+  if (editing) {
+    const commit = () => {
+      const t = val.trim();
+      setEditing(false);
+      if (!t) {
+        setVal(item.label);
+        return;
+      }
+      if (t !== item.label) onEdit?.(item.id, t);
+    };
+    return (
+      <span className="order-chip is-editing">
+        <input
+          className="order-chip-input"
+          value={val}
+          maxLength={20}
+          autoFocus
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              setVal(item.label);
+              setEditing(false);
+            }
+          }}
+          aria-label={`${item.label} 수정`}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className="order-chip is-editable">
+      <button
+        type="button"
+        className="order-chip-label"
+        onClick={() => setEditing(true)}
+        aria-label={`${item.label} 수정`}
+      >
+        {item.label}
+      </button>
+      <button
+        type="button"
+        className="order-chip-del"
+        onClick={() => onRemove?.(item.id)}
+        aria-label={`${item.label} 삭제`}
+      >
+        ✕
+      </button>
+    </span>
+  );
+}
+
 export function GameStage({
   gameType,
   items,
@@ -93,22 +171,38 @@ export function GameStage({
           onEdit={onEditItem}
           locked={active}
           onDraftChange={onDraftChange}
+          // 순서 정하기는 등록된 항목을 아래 칩에서 직접 수정/삭제하므로 편집기는 '추가'만 담당한다.
+          addOnly={gameType === 'order'}
         />
       )}
 
       <div className={`stage-visual${active ? ' active' : ''}`}>
         {gameType === 'order' && (
-          <div className="order-preview">
-            {items.map((it) => (
-              <span key={it.id} className="order-chip">{it.label}</span>
-            ))}
-            {/* 참가자 화면 — 호스트가 지금 입력 중인 항목을 '입력 중' 고스트 칩으로 실시간 표시 */}
-            {!isHost && orderDraft && orderDraft.trim() && (
-              <span className="order-chip" style={{ opacity: 0.5, borderStyle: 'dashed' }}>
-                {orderDraft.trim()}…
-              </span>
+          <>
+            <div className="order-preview">
+              {items.map((it) => (
+                <OrderChip
+                  key={it.id}
+                  item={it}
+                  editable={isHost && !active}
+                  onEdit={onEditItem}
+                  onRemove={onRemoveItem}
+                />
+              ))}
+              {/* 참가자 화면 — 호스트가 지금 입력 중인 항목을 '입력 중' 고스트 칩으로 실시간 표시 */}
+              {!isHost && orderDraft && orderDraft.trim() && (
+                <span className="order-chip" style={{ opacity: 0.5, borderStyle: 'dashed' }}>
+                  {orderDraft.trim()}…
+                </span>
+              )}
+            </div>
+            {/* 호스트 안내 — 시작 전, 칩을 눌러 수정·삭제할 수 있음을 알린다. */}
+            {isHost && !active && items.length > 0 && (
+              <p className="center muted" style={{ fontSize: 12.5 }}>
+                칩을 눌러 수정 · ✕ 로 삭제
+              </p>
             )}
-          </div>
+          </>
         )}
 
         {gameType === 'draw' && (
