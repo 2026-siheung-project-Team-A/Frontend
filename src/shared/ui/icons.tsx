@@ -234,6 +234,27 @@ export function ConfettiIcon(props: IconProps) {
   );
 }
 
+/** 풍선 터짐 — 찐한 빨강/주황 별폭발(스타버스트). 풍선이 터진 순간에 쓴다(Figma node 493:36). */
+export function BurstIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {/* 바깥 빨강 폭발 */}
+      <path
+        d="M12.0 0.8 L13.5 7.0 L18.1 2.6 L15.9 8.6 L22.2 7.3 L17.1 11.3 L23.1 13.6 L16.7 14.2 L20.5 19.3 L14.8 16.4 L15.2 22.7 L12.0 17.2 L8.8 22.7 L9.2 16.4 L3.5 19.3 L7.3 14.2 L0.9 13.6 L6.9 11.3 L1.8 7.3 L8.1 8.6 L5.9 2.6 L10.5 7.0 Z"
+        fill="#e5231a"
+      />
+      {/* 안쪽 주황 폭발 */}
+      <path
+        d="M14.0 5.1 L13.7 9.3 L17.4 7.3 L14.9 10.7 L19.1 11.0 L15.2 12.5 L18.5 15.0 L14.4 14.1 L15.9 18.1 L12.9 15.1 L12.0 19.2 L11.1 15.1 L8.1 18.1 L9.6 14.1 L5.5 15.0 L8.8 12.5 L4.9 11.0 L9.1 10.7 L6.6 7.3 L10.3 9.3 L10.0 5.1 L12.0 8.8 Z"
+        fill="#fb8c2a"
+      />
+      {/* 가운데 섬광 */}
+      <circle cx="12" cy="12" r="3.1" fill="#ffd34d" />
+      <circle cx="12" cy="12" r="1.4" fill="#fff6da" />
+    </Svg>
+  );
+}
+
 /** 복사 — 겹친 두 문서(앞장 + 뒤에 살짝 보이는 문서). currentColor 라인 아이콘. */
 export function CopyIcon(props: IconProps) {
   return (
