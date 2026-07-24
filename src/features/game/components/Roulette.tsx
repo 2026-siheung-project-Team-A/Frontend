@@ -3,10 +3,10 @@ import type { Item } from '../../../shared/types/api';
 import { Screen, Button, TopBar, TrophyIcon } from '../../../shared/ui';
 import { playSound } from '../../../shared/lib/sound';
 
-/** 원판 슬라이스 파스텔 색 (최대 8칸) */
+/** 원판 슬라이스 파스텔 색 (최대 8칸) — Figma 디자인(node 259:2) 팔레트 */
 const SLICE_COLORS = [
-  '#f4a63f', '#ef8d8d', '#b89ae2', '#7cc0e8',
-  '#8ed08c', '#f3cf68', '#e79ac2', '#83d2c3',
+  '#f4789b', '#96d787', '#9ac3eb', '#f3c078',
+  '#e7b0fb', '#ffe281', '#7fd4c1', '#a6b1f2',
 ];
 const MIN = 2;
 const MAX = 12;

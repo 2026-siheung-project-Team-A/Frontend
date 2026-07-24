@@ -12,15 +12,16 @@
   --surface: #ffffff;
   --ink: #16181d; /* 제목·강조 텍스트 */
   --text: #4b5060; /* 본문 */
-  --muted: #8b909c; /* 보조·설명 */
+  --muted: #6b7280; /* 보조·설명 (Figma) */
   --border: #e3e5ea;
   --field: #f5f6f8; /* 인풋 배경 */
   --placeholder: #e6e8ec; /* 일러스트·QR 자리 */
-  --rw-panel: #efe9d7; /* 원판 패널 크림 배경 */
+  --rw-panel: #fcf9ec; /* 원판 패널 크림 배경 (Figma) */
+  --game-panel: #fcf9ec; /* 모든 게임 화면 공용 크림 배경 (원판·제비·순서·사다리·풍선 통일) */
   --rw-rim: #4a4038; /* 원판 테두리·포인터·허브 */
   --primary: #2b2f3a; /* 차콜 프라이머리 버튼 */
   --primary-ink: #ffffff;
-  --accent: #6366f1; /* 선택·진행바·강조 */
+  --accent: #4f46e5; /* 선택·진행바·강조 (Figma 인디고) */
   --accent-soft: #eef0ff;
   --success: #16a34a;
   --danger: #e5484d;
@@ -329,39 +330,161 @@ input {
   color: var(--muted);
   font-size: 14px;
 }
-.list-row {
+/* ── 항목 편집기(투표·순서 정하기 공용) ─────────────────────────────
+   상단에 '추가' 입력칸 + 채움 버튼, 그 아래 순번 붙은 목록. */
+.ie-head {
   display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  min-height: 52px;
-  padding: 0 var(--sp-4);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ie-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.ie-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ie-count.is-low {
+  color: var(--accent);
+}
+/* 추가 입력 줄 */
+.ie-add {
+  display: flex;
+  gap: var(--sp-2);
+}
+.ie-add-input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: var(--r-field);
   background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-/* 항목 인라인 수정 입력칸 — 박스처럼 보이지 않게 리스트 행 안에 자연스럽게 얹는다. */
-.item-edit-input {
+.ie-add-input::placeholder {
+  color: var(--muted);
+}
+.ie-add-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+.ie-add-btn {
+  flex: 0 0 auto;
+  height: 46px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-field);
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.05s ease;
+}
+.ie-add-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.ie-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* 목록 */
+.ie-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.ie-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 8px 0 8px;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+/* 순번 뱃지 */
+.ie-num {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ie-row-text,
+.ie-row-input {
   flex: 1;
   min-width: 0;
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.ie-row-input {
   border: none;
   background: transparent;
-  padding: 0;
-  height: auto;
-  font: inherit;
-  color: inherit;
-  box-shadow: none;
+  padding: 6px 2px;
+  border-bottom: 1.5px solid transparent;
+  border-radius: 0;
+  transition: border-color 0.12s ease;
 }
-.item-edit-input:focus {
+.ie-row-input:focus {
   outline: none;
+  border-bottom-color: var(--accent);
 }
-.list-row .row-remove {
-  margin-left: auto;
+.ie-del {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
-  padding: 4px 8px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.ie-del:hover {
+  background: rgba(229, 72, 77, 0.1);
+  color: var(--danger);
+}
+.ie-empty {
+  margin: 14px 0 2px;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--field);
+  border-radius: var(--r-field);
+  border: 1px dashed var(--border);
+}
+.ie-hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--accent);
+  font-weight: 600;
 }
 .chip {
   display: inline-flex;
@@ -752,7 +875,7 @@ input {
 }
 .rw-slot-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-bg, rgba(99, 102, 241, 0.3));
+  box-shadow: 0 0 0 2px var(--accent-bg, rgba(79, 70, 229, 0.3));
 }
 .rw-slot-input::placeholder {
   color: #9a9a9a;
@@ -988,6 +1111,10 @@ input {
   justify-content: center;
   gap: var(--sp-4);
   min-height: 240px;
+  padding: var(--sp-5) var(--sp-4);
+  background: var(--game-panel); /* 크림 배경 — 다른 게임 화면과 통일 */
+  border: 1px solid #ece4cf;
+  border-radius: var(--r-card);
 }
 
 /* 순서 정하기 — 섞기 전 항목 칩 미리보기 */
@@ -1001,11 +1128,12 @@ input {
 .order-chip {
   padding: 10px 14px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--border);
-  background: var(--field);
+  border: 1px solid #ece4cf;
+  background: var(--surface); /* 흰 알약 칩 (Figma) */
   color: var(--ink);
   font-size: 14px;
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(80, 70, 40, 0.08);
 }
 
 /* 제비 통 */
@@ -1014,9 +1142,9 @@ input {
   align-items: flex-end;
   gap: 10px;
   padding: var(--sp-5);
-  border: 1px solid var(--border);
+  border: 1px solid #ece4cf;
   border-radius: var(--r-card);
-  background: var(--field);
+  background: var(--game-panel); /* 크림 배경 — 다른 게임 화면과 통일 */
   min-height: 180px;
 }
 .draw-stick {
@@ -1303,7 +1431,10 @@ input {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
+  padding: var(--sp-4);
+  background: var(--game-panel); /* 크림 배경 — 다른 게임 화면과 통일 */
+  border: 1px solid #ece4cf;
+  border-radius: var(--r-card);
 }
 .lg-board {
   min-width: calc(var(--cols) * 68px);
@@ -1509,14 +1640,8 @@ input {
   gap: var(--sp-4);
   padding: var(--sp-5) var(--sp-4) var(--sp-6);
   border-radius: var(--r-card);
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(160, 130, 90, 0.05) 0 6px,
-      rgba(160, 130, 90, 0) 6px 13px
-    ),
-    linear-gradient(180deg, #f6f0df 0%, #efe6d0 100%);
-  border: 1px solid #e3d7bc;
+  background: var(--game-panel); /* 크림 배경 — 다른 게임 화면과 통일 */
+  border: 1px solid #ece4cf;
   min-height: 300px;
 }
 .jb-headline {
@@ -2138,6 +2263,9 @@ input {
   width: 100%;
   height: 240px;
   margin: 8px 0;
+  background: var(--game-panel); /* 크림 배경 — 다른 게임 화면과 통일 */
+  border: 1px solid #ece4cf;
+  border-radius: var(--r-card);
 }
 .bp-balloon-big {
   border: none;

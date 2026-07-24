@@ -7,14 +7,16 @@ const MAX_ITEMS = 12;
 /**
  * 이미 추가한 항목 한 줄 — onEdit 이 있으면 label 을 그 자리에서 수정할 수 있는 입력칸으로 보여준다.
  * 값을 바꾸고 포커스가 빠지거나(blur) Enter 를 누르면 커밋(item:update). 빈 값이면 원래 값으로 되돌린다.
- * onEdit 이 없으면 예전처럼 읽기 전용 텍스트로 보여준다.
+ * onEdit 이 없으면 읽기 전용 텍스트로 보여준다. 앞에는 순번 뱃지(1,2,3…)를 붙인다.
  */
 function ItemRow({
   item,
+  index,
   onEdit,
   onRemove,
 }: {
   item: Item;
+  index: number;
   onEdit?: (id: string, label: string) => void;
   onRemove: (id: string) => void;
 }) {
@@ -34,10 +36,11 @@ function ItemRow({
   };
 
   return (
-    <div className="list-row">
+    <li className="ie-row">
+      <span className="ie-num" aria-hidden="true">{index + 1}</span>
       {onEdit ? (
         <input
-          className="input item-edit-input"
+          className="ie-row-input"
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onBlur={commit}
@@ -47,30 +50,30 @@ function ItemRow({
               e.currentTarget.blur();
             }
           }}
-          aria-label={`${item.label} 수정`}
+          aria-label={`${index + 1}번 항목 수정`}
         />
       ) : (
-        <span>{item.label}</span>
+        <span className="ie-row-text">{item.label}</span>
       )}
       <button
-        className="row-remove"
+        type="button"
+        className="ie-del"
         onClick={() => onRemove(item.id)}
         aria-label={`${item.label} 삭제`}
       >
         ✕
       </button>
-    </div>
+    </li>
   );
 }
 
 /**
- * 항목 개수·목록 편집 — 별도 페이지가 아니라 각 게임 화면 위에 그대로 얹혀서 쓰인다.
- * 항목이 하나도 없으면 입력칸 1개로 시작하고("항목이 하나인 상황"), 텍스트를 적고
- * Enter/"+"를 누르면 그 자리에서 서버에 반영(item:add)되며 다음 빈 칸이 이어서 나타난다
- * — 이게 "+ 버튼으로 항목개수를 늘리는" 동작이다. 이미 있는 항목은 ×로 즉시 삭제(item:remove).
- * onEdit 이 있으면(순서 정하기·투표) 이미 추가한 항목의 내용도 그 자리에서 수정할 수 있다(item:update).
- * 한 번에 하나씩만 커밋되므로(사람이 타이핑하는 속도로 자연히 간격이 생김) 서버의
- * read-modify-write 항목 저장 로직이 겹쳐 실행되는 문제가 없다.
+ * 항목 목록 편집 — 별도 페이지가 아니라 각 게임 화면 위에 그대로 얹혀서 쓰인다(투표·순서 정하기 등).
+ *
+ * 상단에 눈에 띄는 '추가' 입력칸 + 채움 버튼을 두고, 그 아래 순번이 붙은 목록을 보여준다.
+ * 텍스트를 적고 Enter 나 '추가'를 누르면 그 자리에서 서버에 반영(item:add)되고 입력칸이 비워진다.
+ * 이미 있는 항목은 ✕ 로 즉시 삭제(item:remove)하고, onEdit 이 있으면 그 자리에서 내용 수정(item:update)한다.
+ * 한 번에 하나씩만 커밋되므로 서버의 read-modify-write 저장이 겹치지 않는다.
  * locked=true 면(게임이 실제로 시작됨) 렌더하지 않는다.
  */
 export function ItemEditor({
@@ -102,6 +105,7 @@ export function ItemEditor({
   if (locked) return null;
 
   const atMax = items.length >= MAX_ITEMS;
+  const needMore = items.length < 2;
 
   const commit = () => {
     const label = draft.trim();
@@ -113,42 +117,63 @@ export function ItemEditor({
 
   return (
     <div className="item-editor">
-      <p className="section-label">
-        항목 {items.length}개
-        {items.length < 2 && ' · 최소 2개 필요'}
-        {atMax && ` · 최대 ${MAX_ITEMS}개`}
-      </p>
-      <div className="stack-sm" style={{ marginTop: 8 }}>
-        {items.map((it) => (
-          <ItemRow key={it.id} item={it} onEdit={onEdit} onRemove={onRemove} />
-        ))}
-        {!atMax && (
-          <div className="list-row">
-            <input
-              className="input"
-              style={{ border: 'none', background: 'transparent', padding: 0, flex: 1 }}
-              placeholder={`항목 ${items.length + 1} 입력`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  commit();
-                }
-              }}
-            />
-            <button
-              className="row-remove"
-              style={{ color: 'var(--accent)', fontWeight: 700 }}
-              onClick={commit}
-              disabled={!draft.trim()}
-              aria-label="항목 추가"
-            >
-              +
-            </button>
-          </div>
-        )}
+      <div className="ie-head">
+        <span className="ie-title">항목 추가</span>
+        <span className={`ie-count${needMore ? ' is-low' : ''}`}>
+          {items.length} / {MAX_ITEMS}
+        </span>
       </div>
+
+      {/* 추가 입력 — 눈에 띄게 상단에. 적고 Enter 나 '추가'를 누르면 목록에 들어간다. */}
+      {!atMax ? (
+        <div className="ie-add">
+          <input
+            className="ie-add-input"
+            placeholder="새 항목을 입력하세요"
+            value={draft}
+            maxLength={20}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                commit();
+              }
+            }}
+            aria-label="새 항목 입력"
+          />
+          <button
+            type="button"
+            className="ie-add-btn"
+            onClick={commit}
+            disabled={!draft.trim()}
+          >
+            추가
+          </button>
+        </div>
+      ) : (
+        <p className="ie-hint">최대 {MAX_ITEMS}개까지 추가할 수 있어요</p>
+      )}
+
+      {/* 목록 */}
+      {items.length === 0 ? (
+        <p className="ie-empty">아직 항목이 없어요. 위에 입력해 2개 이상 추가해 주세요.</p>
+      ) : (
+        <ul className="ie-list">
+          {items.map((it, i) => (
+            <ItemRow
+              key={it.id}
+              item={it}
+              index={i}
+              onEdit={onEdit}
+              onRemove={onRemove}
+            />
+          ))}
+        </ul>
+      )}
+
+      {needMore && items.length > 0 && (
+        <p className="ie-hint">시작하려면 최소 2개가 필요해요 (지금 {items.length}개)</p>
+      )}
     </div>
   );
 }

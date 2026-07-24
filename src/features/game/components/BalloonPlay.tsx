@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BalloonState } from '../../../shared/types/api';
-import { Screen, Button, TopBar, BalloonIcon } from '../../../shared/ui';
+import { Screen, Button, TopBar, BalloonIcon, BurstIcon } from '../../../shared/ui';
 
 /**
  * 풍선 터뜨리기(러시안 룰렛식, 턴제) — 가운데 풍선 하나를 순서대로 펌프한다.
@@ -241,7 +241,7 @@ export function BalloonPlay({
               onClick={pump}
               aria-label={myTurn ? '풍선 펌프' : '풍선'}
             >
-              {done ? '💥' : <BalloonIcon size={96} />}
+              {done ? <BurstIcon size={128} /> : <BalloonIcon size={96} />}
             </button>
           </div>
         )}

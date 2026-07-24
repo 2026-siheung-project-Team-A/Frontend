@@ -21,4 +21,5 @@ export {
   TrashIcon,
   CopyIcon,
   ConfettiIcon,
+  BurstIcon,
 } from './icons';

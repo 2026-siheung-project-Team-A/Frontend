@@ -19,10 +19,10 @@ const MAX = 12;
 const CANVAS_H = 300; // SVG 세로줄 높이(뷰박스 단위)
 const COL = 100; // 칸당 가로 폭(뷰박스 단위) — colX(c) = c*COL + COL/2
 
-/** 시작칸 색상(공개 순서 무관, 칸 index 로 고정) */
+/** 시작칸 색상(공개 순서 무관, 칸 index 로 고정) — 파스텔 팔레트(가는 선이라 살짝 진하게 해 가독 유지) */
 const COLORS = [
-  '#e5484d', '#0091ff', '#30a46c', '#f5a623', '#8e4ec6',
-  '#e93d82', '#00a3a3', '#d6409f', '#5b5bd6', '#bd8b00',
+  '#ef6b93', '#5fa8e0', '#5cbf7e', '#f0a94a', '#c079e0',
+  '#ec6aa0', '#3fbdb0', '#d67ac0', '#7d88e8', '#e0a838',
 ];
 
 const colX = (c: number) => c * COL + COL / 2;

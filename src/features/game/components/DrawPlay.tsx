@@ -20,18 +20,18 @@ const AUTO_SECONDS = 60;
 const MIN = 2;
 const MAX = 12;
 
-/** 제비 색(칸 index 로 고정) — face=앞면, edge=접힘 그림자 */
+/** 제비 색(칸 index 로 고정) — face=앞면, edge=접힘 그림자. Figma 디자인(node 456:122) 파스텔 팔레트 */
 const LOTS = [
-  { face: '#e2726e', edge: '#c65a56' },
-  { face: '#f0c04a', edge: '#d6a636' },
-  { face: '#6aa9e0', edge: '#5090c9' },
-  { face: '#e6e8ec', edge: '#c4c7cf' },
-  { face: '#93c563', edge: '#79ac4c' },
-  { face: '#c58bd6', edge: '#ab72bd' },
-  { face: '#7ad0c0', edge: '#5bb6a5' },
-  { face: '#f19bb6', edge: '#d97f9c' },
-  { face: '#8f97e0', edge: '#727bcb' },
-  { face: '#d8b45c', edge: '#bd9a44' },
+  { face: '#f4789b', edge: '#dd6187' }, // 핑크
+  { face: '#96d787', edge: '#7bbe6c' }, // 그린
+  { face: '#9ac3eb', edge: '#7ba9d6' }, // 블루
+  { face: '#f3c078', edge: '#dba75d' }, // 앰버
+  { face: '#e7b0fb', edge: '#cd93e6' }, // 라일락
+  { face: '#ffe281', edge: '#e9c85f' }, // 옐로
+  { face: '#7fd4c1', edge: '#62bba7' }, // 민트
+  { face: '#a6b1f2', edge: '#8894e0' }, // 페리윙클
+  { face: '#f4a6c0', edge: '#dd88a6' }, // 코럴핑크
+  { face: '#f0c04a', edge: '#d6a636' }, // 골드
 ];
 
 /** 접힌 제비 한 장(SVG). 색은 칸 index 로 고정. */
