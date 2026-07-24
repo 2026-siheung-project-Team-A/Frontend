@@ -16,6 +16,58 @@ import { ItemEditor } from '../../room/components/ItemEditor';
 const secondsUntil = (closeAt: number | null): number =>
   closeAt == null ? 0 : Math.max(0, Math.ceil((closeAt - Date.now()) / 1000));
 
+/**
+ * 준비 단계(호스트 전용) — 이미 등록된 투표 항목 한 줄을 그 자리에서 수정/삭제한다.
+ * 라벨을 바꾸고 blur/Enter 하면 커밋(item:update), 빈 값이면 원복. ✕ 로 삭제(item:remove).
+ * (참가자가 실제로 보는 '투표 항목'이 곧 편집 대상 — 항목이 두 군데 중복으로 안 보이게 한다.)
+ */
+function VoteEditRow({
+  item,
+  onEdit,
+  onRemove,
+}: {
+  item: Item;
+  onEdit?: (id: string, label: string) => void;
+  onRemove?: (id: string) => void;
+}) {
+  const [val, setVal] = useState(item.label);
+  useEffect(() => setVal(item.label), [item.label]);
+  const commit = () => {
+    const t = val.trim();
+    if (!t) {
+      setVal(item.label);
+      return;
+    }
+    if (t !== item.label) onEdit?.(item.id, t);
+  };
+  return (
+    <div className="vote-edit-row">
+      <input
+        className="vote-edit-input"
+        value={val}
+        maxLength={20}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        aria-label={`${item.label} 수정`}
+      />
+      <button
+        type="button"
+        className="ie-del"
+        onClick={() => onRemove?.(item.id)}
+        aria-label={`${item.label} 삭제`}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 export function VotePlay({
   items,
   tally,
@@ -136,9 +188,9 @@ export function VotePlay({
       <TopBar title="투표하기" onBack={isHost ? onLeave : undefined} />
       <p className="subtitle" style={{ marginTop: -8 }}>{subtitle}</p>
 
-      {/* 준비 단계: 호스트만 항목 편집(참가자는 목록만 실시간으로 본다) */}
+      {/* 준비 단계: 호스트는 여기서 '추가'만 한다. 등록된 항목의 수정/삭제는 아래 투표 항목에서 직접. */}
       {isHost && voteStatus === 'preparing' && onAddItem && onRemoveItem && (
-        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} onEdit={onEditItem} />
+        <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} addOnly />
       )}
 
       {/* 마감 카운트다운 — 전원에게 보인다 */}
@@ -156,6 +208,17 @@ export function VotePlay({
         <>
           <div className="stack-sm" style={{ marginTop: 20 }}>
             {items.map((it) => {
+              // 준비 단계의 호스트 — 투표 행 대신 '수정/삭제' 편집 행을 보여준다.
+              if (isHost && voteStatus === 'preparing') {
+                return (
+                  <VoteEditRow
+                    key={it.id}
+                    item={it}
+                    onEdit={onEditItem}
+                    onRemove={onRemoveItem}
+                  />
+                );
+              }
               const count = countById.get(it.id) ?? 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               const isMine = myVote === it.id;

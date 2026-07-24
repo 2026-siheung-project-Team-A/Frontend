@@ -83,6 +83,7 @@ export function ItemEditor({
   onEdit,
   locked,
   onDraftChange,
+  addOnly,
 }: {
   items: Item[];
   onAdd: (label: string) => void;
@@ -92,6 +93,12 @@ export function ItemEditor({
   locked?: boolean;
   /** 입력 중인(아직 커밋 안 한) 항목 텍스트를 실시간으로 알린다(순서 정하기 참가자 미리보기용). */
   onDraftChange?: (text: string) => void;
+  /**
+   * true 면 '추가'만 담당하고 목록(수정/삭제)은 그리지 않는다.
+   * 투표·순서 정하기는 등록된 항목을 게임 화면(투표 행·순서 칩)에서 직접 수정/삭제하므로
+   * 항목이 두 군데 중복으로 보이지 않도록 여기선 입력칸만 남긴다.
+   */
+  addOnly?: boolean;
 }) {
   const [draft, setDraft] = useState('');
 
@@ -107,10 +114,17 @@ export function ItemEditor({
   const atMax = items.length >= MAX_ITEMS;
   const needMore = items.length < 2;
 
+  // 이미 있는 항목과 같은 텍스트면(앞뒤 공백·대소문자 무시) 중복이므로 추가를 막는다.
+  const trimmed = draft.trim();
+  const isDuplicate =
+    trimmed.length > 0 &&
+    items.some(
+      (it) => it.label.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+
   const commit = () => {
-    const label = draft.trim();
-    if (!label || atMax) return;
-    onAdd(label);
+    if (!trimmed || atMax || isDuplicate) return;
+    onAdd(trimmed);
     onDraftChange?.(''); // 커밋되면 '입력 중' 미리보기를 즉시 지운다(항목은 item:add 로 공유됨)
     setDraft('');
   };
@@ -128,7 +142,7 @@ export function ItemEditor({
       {!atMax ? (
         <div className="ie-add">
           <input
-            className="ie-add-input"
+            className={`ie-add-input${isDuplicate ? ' is-dup' : ''}`}
             placeholder="새 항목을 입력하세요"
             value={draft}
             maxLength={20}
@@ -140,12 +154,13 @@ export function ItemEditor({
               }
             }}
             aria-label="새 항목 입력"
+            aria-invalid={isDuplicate}
           />
           <button
             type="button"
             className="ie-add-btn"
             onClick={commit}
-            disabled={!draft.trim()}
+            disabled={!trimmed || isDuplicate}
           >
             추가
           </button>
@@ -154,22 +169,26 @@ export function ItemEditor({
         <p className="ie-hint">최대 {MAX_ITEMS}개까지 추가할 수 있어요</p>
       )}
 
-      {/* 목록 */}
-      {items.length === 0 ? (
-        <p className="ie-empty">아직 항목이 없어요. 위에 입력해 2개 이상 추가해 주세요.</p>
-      ) : (
-        <ul className="ie-list">
-          {items.map((it, i) => (
-            <ItemRow
-              key={it.id}
-              item={it}
-              index={i}
-              onEdit={onEdit}
-              onRemove={onRemove}
-            />
-          ))}
-        </ul>
-      )}
+      {/* 중복 안내 — 이미 있는 항목과 같은 텍스트를 입력하면 표시(추가 버튼도 비활성). */}
+      {isDuplicate && <p className="ie-dup">이미 추가된 항목이에요</p>}
+
+      {/* 목록 — addOnly 면 그리지 않는다(등록된 항목은 게임 화면에서 직접 수정/삭제). */}
+      {!addOnly &&
+        (items.length === 0 ? (
+          <p className="ie-empty">아직 항목이 없어요. 위에 입력해 2개 이상 추가해 주세요.</p>
+        ) : (
+          <ul className="ie-list">
+            {items.map((it, i) => (
+              <ItemRow
+                key={it.id}
+                item={it}
+                index={i}
+                onEdit={onEdit}
+                onRemove={onRemove}
+              />
+            ))}
+          </ul>
+        ))}
 
       {needMore && items.length > 0 && (
         <p className="ie-hint">시작하려면 최소 2개가 필요해요 (지금 {items.length}개)</p>

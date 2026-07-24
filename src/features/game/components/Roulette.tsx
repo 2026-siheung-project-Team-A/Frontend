@@ -3,10 +3,16 @@ import type { Item } from '../../../shared/types/api';
 import { Screen, Button, TopBar, TrophyIcon } from '../../../shared/ui';
 import { playSound } from '../../../shared/lib/sound';
 
-/** 원판 슬라이스 파스텔 색 (최대 8칸) — Figma 디자인(node 259:2) 팔레트 */
+/**
+ * 원판 슬라이스 파스텔 색 (최대 12칸).
+ * 앞 8색은 Figma 디자인(node 259:2) 팔레트 그대로 — 8칸 이하 화면은 기존과 동일하다.
+ * 뒤 4색(9~12칸용)을 덧붙여, 옵션 수가 팔레트를 넘겨 색이 반복되거나(예: 9번째 칸이
+ * 1번째 칸과 같은 색) 인접 칸끼리 겹쳐 보이지 않게 한다(MAX=12 와 색 수를 맞춘다).
+ */
 const SLICE_COLORS = [
   '#f4789b', '#96d787', '#9ac3eb', '#f3c078',
   '#e7b0fb', '#ffe281', '#7fd4c1', '#a6b1f2',
+  '#f79b7d', '#cbe58a', '#c3a9f5', '#f28b82',
 ];
 const MIN = 2;
 const MAX = 12;

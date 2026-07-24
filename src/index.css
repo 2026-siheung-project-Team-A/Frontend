@@ -486,6 +486,19 @@ input {
   color: var(--accent);
   font-weight: 600;
 }
+/* 중복 항목 안내 — 이미 있는 항목과 같은 텍스트 입력 시 */
+.ie-dup {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--danger);
+  font-weight: 600;
+}
+.ie-add-input.is-dup {
+  border-color: var(--danger);
+}
+.ie-add-input.is-dup:focus {
+  border-color: var(--danger);
+}
 .chip {
   display: inline-flex;
   align-items: center;
@@ -1046,6 +1059,33 @@ input {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+/* 준비 단계(호스트) — 등록된 투표 항목을 그 자리에서 수정/삭제하는 편집 행 */
+.vote-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px var(--sp-3) 4px var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface);
+}
+.vote-edit-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  border: none;
+  background: transparent;
+  padding: 8px 2px;
+  border-bottom: 1.5px solid transparent;
+  transition: border-color 0.12s ease;
+}
+.vote-edit-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
 .vote-radio {
   grid-area: radio;
   width: 20px;
@@ -1134,6 +1174,55 @@ input {
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(80, 70, 40, 0.08);
+}
+/* 호스트 편집용 칩 — 라벨(수정) + ✕(삭제) */
+.order-chip.is-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 6px 14px;
+}
+.order-chip-label {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.order-chip-del {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.order-chip-del:hover {
+  background: rgba(229, 72, 77, 0.1);
+  color: var(--danger);
+}
+.order-chip.is-editing {
+  padding: 4px 10px;
+}
+.order-chip-input {
+  width: 96px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 1.5px solid var(--accent);
+  outline: none;
 }
 
 /* 제비 통 */
