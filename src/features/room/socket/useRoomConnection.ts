@@ -126,7 +126,16 @@ export function useRoomConnection(
 
     // ── 게임 진행·결과 ──────────────────────────────────────────────
     socket.on('game:selected', (p: { gameType: RoomStatePayload['gameType'] }) => {
-      useRoomStore.getState().setGameType(p.gameType);
+      const st = useRoomStore.getState();
+      st.setGameType(p.gameType);
+      // 이전 게임 결과를 보던(아직 로비로 안 돌아온) 참가자는, 호스트가 새 게임을 고르면 그 게임
+      // 화면으로 끌려가지 않도록 결과를 지우고 로비(대기)로 돌려보낸다. 또한 room:ready 로 복귀를
+      // 알려 'WAITING' 에 갇히지 않게 한다(호스트의 새 게임 시작 게이트에도 반영).
+      if (role === 'participant' && (st.status === 'finished' || st.result)) {
+        st.setResult(null);
+        st.setStatus('waiting');
+        socket.emit('room:ready');
+      }
     });
     // 새 라운드 시작 — 이전 라운드 잔여물(결과·집계·사다리·제비·원판 초안)을 먼저 지운다.
     // 안 그러면 아직 방으로 안 돌아온 참가자 화면에 옛 결과 모달이 새 게임 위에 남고,
@@ -259,8 +268,11 @@ export function useRoomConnection(
     socket.on('room:closed', () => {
       if (role === 'participant') useRoomStore.getState().setClosed(true);
     });
-    // 호스트가 나를 강퇴함 — 안내 토스트 후 방 종료와 같은 경로로 홈으로 돌아간다.
+    // 호스트가 나를 강퇴함 — 자동 재연결을 끊어 다시 붙지 않게 한 뒤(안 끊으면 room:join 으로
+    // 되살아난다) 안내 토스트와 함께 방 종료와 같은 경로로 홈으로 돌아간다.
     socket.on('room:kicked', () => {
+      socket.io.reconnection(false); // 이후 자동 재연결 시도 자체를 막는다
+      socket.disconnect();
       const st = useRoomStore.getState();
       st.pushNotice('호스트가 방에서 내보냈어요');
       st.setClosed(true);
