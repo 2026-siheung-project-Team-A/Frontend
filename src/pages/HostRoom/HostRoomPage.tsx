@@ -52,12 +52,12 @@ export function HostRoomPage() {
   const title = useRoomStore((s) => s.title);
   const participants = useRoomStore((s) => s.participants);
   const readyPlayers = useRoomStore((s) => s.readyPlayers);
-  const onlineCount = useRoomStore((s) => s.onlineCount);
   const storeItems = useRoomStore((s) => s.items);
   const storeResult = useRoomStore((s) => s.result);
   const tally = useRoomStore((s) => s.tally);
   const voteStatus = useRoomStore((s) => s.voteStatus);
   const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
+  const voteAuto = useRoomStore((s) => s.voteAuto);
   const connection = useRoomStore((s) => s.connection);
   const ladder = useRoomStore((s) => s.ladder);
   const ladderTopLabels = useRoomStore((s) => s.ladderTopLabels);
@@ -135,6 +135,12 @@ export function HostRoomPage() {
     if (connected && s) roomSocket.close(s);
     useRoomStore.getState().reset();
     navigate(homePath());
+  };
+
+  // 참가자 강퇴 — 대기(WAITING)로 멈춰 게임 시작을 막는 참가자를 호스트가 내보낸다.
+  const kickParticipant = (nickname: string) => {
+    const s = socketRef.current;
+    if (connected && s) roomSocket.kick(s, nickname);
   };
 
   // 항목 추가/삭제 — 게임 화면 위 ItemEditor에서 한 번에 하나씩 커밋된다(사람이 타이핑하는
@@ -341,12 +347,12 @@ export function HostRoomPage() {
         joinUrl={`${window.location.origin}/r/${roomId}`}
         participants={participants}
         readyPlayers={readyPlayers}
-        onlineCount={onlineCount}
         isHost
         gameType={gameType}
         onSelectGame={chooseGame}
         onStart={beginPlay}
         onDeleteRoom={deleteRoom}
+        onKick={kickParticipant}
       />
     );
   }
@@ -363,6 +369,7 @@ export function HostRoomPage() {
         myVote={myVote}
         voteStatus={voteStatus}
         voteCloseAt={voteCloseAt}
+        voteAuto={voteAuto}
         onVote={castVote}
         onStart={startVote}
         onClose={closeVote}

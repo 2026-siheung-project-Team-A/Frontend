@@ -44,12 +44,12 @@ export function GameRoomPage() {
   const nickname = useRoomStore((s) => s.nickname);
   const participants = useRoomStore((s) => s.participants);
   const readyPlayers = useRoomStore((s) => s.readyPlayers);
-  const onlineCount = useRoomStore((s) => s.onlineCount);
   const items = useRoomStore((s) => s.items);
   const result = useRoomStore((s) => s.result);
   const tally = useRoomStore((s) => s.tally);
   const voteStatus = useRoomStore((s) => s.voteStatus);
   const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
+  const voteAuto = useRoomStore((s) => s.voteAuto);
   const roomError = useRoomStore((s) => s.roomError);
   const closed = useRoomStore((s) => s.closed);
   const ladder = useRoomStore((s) => s.ladder);
@@ -277,6 +277,7 @@ export function GameRoomPage() {
           myVote={myVote}
           voteStatus={voteStatus}
           voteCloseAt={voteCloseAt}
+          voteAuto={voteAuto}
           onVote={castVote}
           onLeave={goHome}
         />
@@ -318,7 +319,6 @@ export function GameRoomPage() {
         title={title}
         participants={participants}
         readyPlayers={readyPlayers}
-        onlineCount={onlineCount}
         isHost={false}
         me={nickname}
         gameType={gameType}

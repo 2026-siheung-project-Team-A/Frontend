@@ -124,6 +124,7 @@ export interface RoomStatePayload {
   // 투표 라이프사이클 — 재접속·늦은 입장이 현재 단계·카운트다운을 복원한다.
   voteStatus: VoteStatus;
   voteCloseAt: number | null;
+  voteAuto?: boolean; // closing 이 '전원 투표' 자동 마감이면 true
 }
 
 /** `room:readyUpdate` — 로비로 돌아온 참가자 목록이 바뀔 때마다(입장·복귀·퇴장). 호스트 UI 가 시작 버튼을 연다. */
@@ -314,13 +315,15 @@ export type VoteStatus = 'preparing' | 'open' | 'closing' | 'closed';
 export interface VoteStatePayload {
   status: VoteStatus;
   closeAt: number | null;
+  auto?: boolean; // closing 이 '전원 투표' 자동 마감이면 true — 안내 문구 구분용
 }
 
 /** 투표: 집계 + 최다 득표 */
 export interface VoteResult {
   type: 'vote';
   tally: VoteTallyEntry[]; // 득표 0 항목도 포함, 항목 순서대로
-  winner: Item; // 최다 득표(동점이면 항목 순서상 먼저)
+  winner: Item; // 최다 득표 대표값(하위호환) — winners[0] 과 같다
+  winners: Item[]; // 최다 득표 전원(동점이면 공동 1위로 여럿)
 }
 
 /**

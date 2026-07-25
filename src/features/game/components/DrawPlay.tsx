@@ -19,6 +19,8 @@ const AUTO_SECONDS = 60;
 
 const MIN = 2;
 const MAX = 12;
+/** 제비 수를 허용 범위[MIN, MAX]로 자른다. */
+const clampCount = (n: number) => Math.max(MIN, Math.min(MAX, n));
 
 /** 제비 색(칸 index 로 고정) — face=앞면, edge=접힘 그림자. Figma 디자인(node 456:122) 파스텔 팔레트 */
 const LOTS = [
@@ -90,8 +92,14 @@ export function DrawPlay({
   onLeave: () => void;
 }) {
   // 스텝퍼 로컬 상태 — 진행 중 제비판이 있으면 그 값으로 시작(재접속 복원 대비).
-  const [count, setCountRaw] = useState(() => draw?.count ?? 5);
+  // 새 판이면 참가자 수만큼 제비를 기본값으로 둔다(참가자가 없으면 최소값). 호스트가 직접
+  // 조절하면 그 뒤로는 참가자 수 변동을 자동 반영하지 않는다(manualRef).
+  const [count, setCountRaw] = useState(() =>
+    draw?.count ?? clampCount(participantCount ?? 0),
+  );
   const [blanks, setBlanksRaw] = useState(() => draw?.blanks ?? 1);
+  // 호스트가 제비 수·꽝을 직접 조절했는지 — true 면 참가자 수 자동 반영을 멈춘다.
+  const manualRef = useRef(false);
   const [picking, setPicking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   // 60초 카운트다운 — 라운드가 시작되면 60에서 시작해 1초씩 준다. 0이 되면(호스트만) 안 뽑힌 제비를 자동 공개.
@@ -100,6 +108,7 @@ export function DrawPlay({
 
   // 설정이 바뀔 때마다(호스트) 참가자에게 실시간 미리보기를 보낸다(draw:draft).
   const setCount = (n: number) => {
+    manualRef.current = true; // 호스트가 직접 조절 — 참가자 수 자동 반영 중단
     const next = Math.max(MIN, Math.min(MAX, n));
     const nextBlanks = Math.max(1, Math.min(next - 1, blanks)); // 꽝은 1..count-1
     setCountRaw(next);
@@ -107,10 +116,23 @@ export function DrawPlay({
     if (isHost) onDraftChange?.(next, nextBlanks);
   };
   const setBlanks = (n: number) => {
+    manualRef.current = true;
     const nextBlanks = Math.max(1, Math.min(count - 1, n));
     setBlanksRaw(nextBlanks);
     if (isHost) onDraftChange?.(count, nextBlanks);
   };
+
+  // 새 판 준비 중(호스트, draw 아직 없음)엔 참가자 수에 맞춰 제비 수를 자동 조정한다.
+  // 호스트가 스텝퍼를 직접 만지면(manualRef) 멈춘다. 늦게 들어온 참가자만큼 기본값이 따라온다.
+  useEffect(() => {
+    if (!isHost || draw || manualRef.current) return;
+    const target = clampCount(participantCount ?? 0);
+    if (target === count) return;
+    const nextBlanks = Math.max(1, Math.min(target - 1, blanks));
+    setCountRaw(target);
+    setBlanksRaw(nextBlanks);
+    onDraftChange?.(target, nextBlanks);
+  }, [isHost, draw, participantCount, count, blanks, onDraftChange]);
 
   // 최초 설정 진입 시 한 번 — 참가자에게 시작 설정을 알려 미리보기 판을 바로 보여준다.
   const didInitDraft = useRef(false);
