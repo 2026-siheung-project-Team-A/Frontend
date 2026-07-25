@@ -109,6 +109,7 @@ export interface RoomStatePayload {
   items: Item[];
   participants: string[]; // 닉네임 목록
   participantCount: number;
+  maxParticipants: number; // 방 정원(선택 게임 종류로 정해짐) — 대기 화면 "최대 N명" 표시용
   onlineCount: number; // 이 방에 연결된 소켓 수(닉네임 확정 전 포함)
   // 사다리가 진행 중이면 그 구조·상하단 라벨(build 스냅샷)·이미 공개된 시작칸 — 재접속/늦은 입장 복원.
   ladder: LadderStructure | null;

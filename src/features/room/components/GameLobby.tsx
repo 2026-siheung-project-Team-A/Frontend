@@ -28,9 +28,6 @@ const gameLabel = (gt: GameType | null | undefined) =>
  * 참가자 목록은 백엔드 계약대로 닉네임 문자열 배열(participant:joined/left · room:state).
  */
 
-/** 방 정원(방장 포함) — 백엔드 ROOM_CAPACITY.DEFAULT 와 일치. 현재 방 생성 시 정원을 따로
- *  받지 않으므로 모든 방이 이 기본값으로 만들어진다. 대기 화면에 "최대 N명"으로 안내한다. */
-const ROOM_CAPACITY = 12;
 
 export function GameLobby({
   roomId,
@@ -76,6 +73,7 @@ export function GameLobby({
   // 게임 시작 카운트다운 — 호스트가 '게임 시작 ▶'을 누르면 서버가 준 시각(countdownStartAt)까지
   // 전원이 로비에 머문 채 'N초 뒤 게임으로 들어가요'를 함께 본다(각자 로컬 시계로 동기화).
   const countdownStartAt = useRoomStore((s) => s.countdownStartAt);
+  const maxParticipants = useRoomStore((s) => s.maxParticipants);
   const [countdownSecs, setCountdownSecs] = useState(0);
   useEffect(() => {
     if (!countdownStartAt) {
@@ -190,7 +188,7 @@ export function GameLobby({
         </span>
         <span className="lobby-live">
           <i className="lobby-dot" aria-hidden="true" />
-          {live} / {ROOM_CAPACITY}명 접속
+          {live} / {maxParticipants}명 접속
         </span>
       </div>
 

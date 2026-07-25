@@ -48,6 +48,7 @@ interface RoomState {
   gameType: GameType | null;
   isSecret: boolean; // 비밀방 여부(room:state) — 로비 자물쇠 표시용
   participants: string[]; // 닉네임 목록
+  maxParticipants: number; // 방 정원(room:state) — 대기 화면 "최대 N명" 표시용
   readyPlayers: string[]; // 다음 게임을 위해 로비로 돌아온 참가자 닉네임(room:readyUpdate / room:state)
   items: Item[];
   result: GameResult | null;
@@ -143,6 +144,7 @@ const initial = {
   gameType: null,
   isSecret: false,
   participants: [] as string[],
+  maxParticipants: 50,
   readyPlayers: [] as string[],
   items: [] as Item[],
   result: null as GameResult | null,
@@ -187,6 +189,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       gameType: state.gameType,
       isSecret: state.isSecret ?? false,
       participants: state.participants,
+      maxParticipants: state.maxParticipants ?? 50,
       readyPlayers: state.ready ?? [],
       items: state.items,
       onlineCount: state.onlineCount,
