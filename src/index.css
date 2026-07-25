@@ -2139,6 +2139,28 @@ input {
   background: var(--accent);
   color: #fff;
 }
+/* 호스트 전용 참가자 강퇴(내보내기) 버튼 */
+.lobby-kick {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.lobby-kick:hover {
+  background: rgba(229, 72, 77, 0.12);
+  color: var(--danger);
+}
 .lobby-foot {
   margin-top: 18px;
   font-size: 13px;

@@ -9,6 +9,11 @@ export function VoteResult({ result }: { result: VoteResultData }) {
   const ranked = [...result.tally].sort((a, b) => b.count - a.count);
   const max = ranked[0]?.count ?? 0;
 
+  // 공동 1위 — winners 가 여럿이면 모두 당첨으로 표시(하위호환: winners 없으면 winner 하나).
+  const winners = result.winners ?? [result.winner];
+  const winnerIds = new Set(winners.map((w) => w.id));
+  const tie = winners.length > 1;
+
   return (
     <>
       <p className="muted center">총 {total}표</p>
@@ -16,10 +21,12 @@ export function VoteResult({ result }: { result: VoteResultData }) {
       <div className="stack-sm" style={{ marginTop: 16 }}>
         {ranked.map((t, i) => {
           const pct = max > 0 ? Math.round((t.count / max) * 100) : 0;
-          const isWinner = t.item.id === result.winner.id;
+          const isWinner = winnerIds.has(t.item.id);
+          // 공동 1위면 동점자 모두 '1위'로 표기. 그 외에는 정렬 순위.
+          const rankLabel = isWinner ? '1위' : `${i + 1}위`;
           return (
             <div key={t.item.id} className={`vote-result-row${isWinner ? ' winner' : ''}`}>
-              <span className="vote-rank">{i + 1}위</span>
+              <span className="vote-rank">{rankLabel}</span>
               <span className="vote-label">{t.item.label}</span>
               <span className="vote-count">{t.count}표</span>
               <span className="vote-bar">
@@ -31,9 +38,11 @@ export function VoteResult({ result }: { result: VoteResultData }) {
       </div>
 
       <div className="result-card" style={{ marginTop: 20, padding: 20 }}>
-        <p className="section-label" style={{ color: 'var(--accent)' }}>당첨!</p>
-        <p className="result-winner" style={{ fontSize: 30, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          {result.winner.label} <ConfettiIcon size={26} />
+        <p className="section-label" style={{ color: 'var(--accent)' }}>
+          {tie ? `공동 1위 (${winners.length})` : '당첨!'}
+        </p>
+        <p className="result-winner" style={{ fontSize: tie ? 24 : 30, display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {winners.map((w) => w.label).join(', ')} <ConfettiIcon size={26} />
         </p>
       </div>
     </>

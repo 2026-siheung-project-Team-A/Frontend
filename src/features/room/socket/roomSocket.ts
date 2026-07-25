@@ -11,6 +11,9 @@ export const roomSocket = {
     socket.emit('room:join', { nickname }),
   leave: (socket: Socket) => socket.emit('room:leave'),
   close: (socket: Socket) => socket.emit('room:close'),
+  /** host — 참가자 강퇴(닉네임). 대기로 멈춰 시작을 막는 참가자를 내보낼 때 쓴다. */
+  kick: (socket: Socket, nickname: string) =>
+    socket.emit('room:kick', { nickname }),
   /** 참가자 '방으로 돌아가기' — 게임이 끝난 뒤 로비 복귀를 서버에 알린다(호스트의 새 게임 시작 게이트 통과). */
   ready: (socket: Socket) => socket.emit('room:ready'),
 

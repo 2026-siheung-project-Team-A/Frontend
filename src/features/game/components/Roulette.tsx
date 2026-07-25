@@ -265,7 +265,7 @@ export function Roulette({
           >
             +
           </button>
-          <span className="rw-count-hint">(2개~8개 설정가능)</span>
+          <span className="rw-count-hint">({MIN}개~{MAX}개 설정가능)</span>
         </div>
       )}
       <div className="rw-panel">

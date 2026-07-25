@@ -28,8 +28,9 @@ const gameLabel = (gt: GameType | null | undefined) =>
  * 참가자 목록은 백엔드 계약대로 닉네임 문자열 배열(participant:joined/left · room:state).
  */
 
-/** 로비가 비어 보이지 않게 최소로 보여줄 슬롯 수(방장 포함). 그 이상은 참가자 수만큼 늘어난다. */
-const MIN_SLOTS = 6;
+/** 방 정원(방장 포함) — 백엔드 ROOM_CAPACITY.DEFAULT 와 일치. 현재 방 생성 시 정원을 따로
+ *  받지 않으므로 모든 방이 이 기본값으로 만들어진다. 대기 화면에 "최대 N명"으로 안내한다. */
+const ROOM_CAPACITY = 12;
 
 export function GameLobby({
   roomId,
@@ -37,7 +38,6 @@ export function GameLobby({
   joinUrl,
   participants,
   readyPlayers,
-  onlineCount = 0,
   isHost,
   me,
   gameType,
@@ -45,13 +45,13 @@ export function GameLobby({
   onStart,
   onLeave,
   onDeleteRoom,
+  onKick,
 }: {
   roomId: string;
   title?: string; // 방 이름(호스트가 방 만들 때 입력). 있으면 상단 제목으로 보여준다.
   joinUrl?: string;
   participants: string[]; // 닉네임 목록
   readyPlayers?: string[]; // 게임 후 로비로 돌아온 참가자(호스트·복귀한 참가자 모두 전달). 없으면 전원 준비된 것으로 본다.
-  onlineCount?: number; // 접속 소켓 수(입장 전 포함)
   isHost: boolean;
   me?: string | null; // 내 닉네임(참가자) — 내 슬롯에 '나' 표시
   gameType?: GameType | null; // 현재 선택된 게임 (참가자에게도 실시간 반영)
@@ -59,8 +59,11 @@ export function GameLobby({
   onStart?: () => void; // 호스트: 게임 시작
   onLeave?: () => void; // 참가자: 나가기(확인 모달 → room:leave)
   onDeleteRoom?: () => void; // 호스트: 방 삭제(확인 모달 → room:close, 전원 퇴장)
+  onKick?: (nickname: string) => void; // 호스트: 참가자 강퇴(대기로 멈춘 참가자 등)
 }) {
   const [qrOpen, setQrOpen] = useState(false);
+  // 강퇴 확인 대상(닉네임). null 이면 모달 닫힘.
+  const [kickTarget, setKickTarget] = useState<string | null>(null);
   // 뒤로가기·방나가기·방삭제 공통 확인 모달. 확인 시 호스트=방삭제, 참가자=방나가기.
   const [confirmLeave, setConfirmLeave] = useState(false);
   const confirmLeaveAction = () => {
@@ -138,8 +141,9 @@ export function GameLobby({
     }
   };
 
-  const live = onlineCount || participants.length + (isHost ? 1 : 0);
-  const emptySlots = Math.max(0, MIN_SLOTS - (participants.length + 1));
+  // 접속 인원 = 실제 명단(방장 1명 + 입장한 참가자). 로스터에 보이는 사람 수와 항상 일치시킨다.
+  // (raw 소켓 수 onlineCount 는 입장 전 소켓·중복까지 세어 부정확했다.)
+  const live = participants.length + 1;
 
   // 다음 게임을 시작하려면 현재 참가자 전원이 로비로 돌아와 있어야 한다(전 게임에서 안 돌아온 사람은
   // 60초 뒤 자동 퇴장해 목록에서 빠진다). 아직 안 돌아온 참가자는 로비에 있는 호스트·참가자에게
@@ -186,7 +190,7 @@ export function GameLobby({
         </span>
         <span className="lobby-live">
           <i className="lobby-dot" aria-hidden="true" />
-          {live}명 접속
+          {live} / {ROOM_CAPACITY}명 접속
         </span>
       </div>
 
@@ -247,16 +251,21 @@ export function GameLobby({
               // 게임이 끝났는데 아직 방으로 안 돌아온 참가자(60초 자동강퇴 전) — 대기 상태로 표시.
               <span className="lobby-badge waiting">WAITING</span>
             )}
+            {/* 호스트만 — 참가자 강퇴(대기로 멈춰 시작을 막는 참가자를 내보낸다). */}
+            {isHost && onKick && (!me || nick !== me) && (
+              <button
+                type="button"
+                className="lobby-kick"
+                onClick={() => setKickTarget(nick)}
+                aria-label={`${nick} 내보내기`}
+                title="내보내기"
+              >
+                ✕
+              </button>
+            )}
           </div>
         ))}
 
-        {/* 빈 자리 */}
-        {Array.from({ length: emptySlots }, (_, i) => (
-          <div key={`empty-${i}`} className="lobby-slot is-empty">
-            <span className="lobby-ava empty">＋</span>
-            <span className="lobby-name muted">비어 있음</span>
-          </div>
-        ))}
       </div>
 
       {counting ? (
@@ -370,6 +379,43 @@ export function GameLobby({
                 </Button>
                 <Button onClick={confirmLeaveAction}>
                   {isHost ? '방 삭제하고 나가기' : '나가기'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 강퇴 확인 — 호스트가 참가자를 내보낼 때. */}
+      {kickTarget && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setKickTarget(null)}
+          role="presentation"
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ textAlign: 'center' }}
+          >
+            <p className="title center" style={{ fontSize: 20, marginTop: 0 }}>
+              <b>{kickTarget}</b>님을 내보낼까요?
+            </p>
+            <p className="subtitle center">
+              내보낸 참가자는 방에서 나가며, 다시 들어오려면 코드로 재입장해야 해요.
+            </p>
+            <div className="modal-actions">
+              <div className="grid-2">
+                <Button variant="secondary" onClick={() => setKickTarget(null)}>
+                  취소
+                </Button>
+                <Button
+                  onClick={() => {
+                    onKick?.(kickTarget);
+                    setKickTarget(null);
+                  }}
+                >
+                  내보내기
                 </Button>
               </div>
             </div>

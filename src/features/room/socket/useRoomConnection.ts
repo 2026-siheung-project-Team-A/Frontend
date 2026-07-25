@@ -259,6 +259,12 @@ export function useRoomConnection(
     socket.on('room:closed', () => {
       if (role === 'participant') useRoomStore.getState().setClosed(true);
     });
+    // 호스트가 나를 강퇴함 — 안내 토스트 후 방 종료와 같은 경로로 홈으로 돌아간다.
+    socket.on('room:kicked', () => {
+      const st = useRoomStore.getState();
+      st.pushNotice('호스트가 방에서 내보냈어요');
+      st.setClosed(true);
+    });
     socket.on('error', (e: { code: ErrorCode; message?: string }) => {
       if (!e?.code) return;
       // 투표 라이프사이클 경합(마감 직후 투표 시도 등)은 치명적이지 않다 — 전체 에러 화면 대신 조용히 무시.
@@ -266,8 +272,24 @@ export function useRoomConnection(
       useRoomStore.getState().setError(e.code);
     });
 
+    // 모바일에서 화면을 껐다 켜거나(백그라운드→포그라운드) 네트워크가 돌아오면 소켓이 끊긴 채
+    // 남아 있을 수 있다. socket.io 자동 재연결은 백오프 타이머라(모바일 백그라운드에서 지연·정지)
+    // 즉시 붙지 않으므로, 복귀 즉시 재연결을 시도해 'waiting' 상태에서 빨리 빠져나온다
+    // ('connect' 핸들러가 room:join 으로 슬롯을 reclaim 한다).
+    const resume = () => {
+      if (document.visibilityState === 'visible' && socket.disconnected) {
+        socket.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('online', resume);
+    window.addEventListener('focus', resume);
+
     return () => {
       if (beginTimer) clearTimeout(beginTimer);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('online', resume);
+      window.removeEventListener('focus', resume);
       socket.off();
       socket.disconnect();
       socketRef.current = null;
