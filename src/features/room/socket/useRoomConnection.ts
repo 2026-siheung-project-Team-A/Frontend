@@ -56,9 +56,10 @@ export function useRoomConnection(
     store.setConnection('connecting');
     store.setError(null);
     store.setClosed(false);
-    // 'game:missed'(그래도 시작으로 빠짐) 플래그도 새 연결마다 초기화한다 — 안 지우면 전역 store 에
-    // missed=true 가 남아, 이후 다른 방에 입장해도 GameRoomPage 가 곧바로 홈으로 되돌려 갇힌다.
+    // 'game:missed'(그래도 시작으로 빠짐)·강퇴(kicked) 플래그도 새 연결마다 초기화한다 — 안 지우면
+    // 전역 store 에 true 가 남아, 이후 다른 방에 입장해도 GameRoomPage 가 곧바로 홈으로 되돌려 갇힌다.
     store.setMissed(false);
+    store.setKicked(false);
 
     const socket = connectRoom({
       roomId,
@@ -276,9 +277,8 @@ export function useRoomConnection(
     socket.on('room:kicked', () => {
       socket.io.reconnection(false); // 이후 자동 재연결 시도 자체를 막는다
       socket.disconnect();
-      const st = useRoomStore.getState();
-      st.pushNotice('호스트가 방에서 내보냈어요');
-      st.setClosed(true);
+      // '방 삭제'(closed)와 구분해 강퇴 전용 안내를 띄운다 — 홈으로 이동해 강퇴 모달을 보여준다.
+      useRoomStore.getState().setKicked(true);
     });
     // 호스트가 '그래도 시작'으로 나를 빼고 게임을 시작함(접속이 늦음) — 강퇴와 달리 방이 살아 있으므로
     // '삭제됨' 모달이 아니라 안내 토스트만 띄우고 홈으로 돌려보낸다(missed 플래그로 페이지가 이동).
