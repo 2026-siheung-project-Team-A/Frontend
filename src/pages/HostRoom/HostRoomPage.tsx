@@ -57,7 +57,6 @@ export function HostRoomPage() {
   const tally = useRoomStore((s) => s.tally);
   const voteStatus = useRoomStore((s) => s.voteStatus);
   const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
-  const voteAuto = useRoomStore((s) => s.voteAuto);
   const connection = useRoomStore((s) => s.connection);
   const ladder = useRoomStore((s) => s.ladder);
   const ladderTopLabels = useRoomStore((s) => s.ladderTopLabels);
@@ -370,7 +369,6 @@ export function HostRoomPage() {
         myVote={myVote}
         voteStatus={voteStatus}
         voteCloseAt={voteCloseAt}
-        voteAuto={voteAuto}
         onVote={castVote}
         onStart={startVote}
         onClose={closeVote}

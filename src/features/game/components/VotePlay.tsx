@@ -75,7 +75,6 @@ export function VotePlay({
   myVote,
   voteStatus,
   voteCloseAt,
-  voteAuto,
   onVote,
   onStart,
   onClose,
@@ -93,8 +92,6 @@ export function VotePlay({
   myVote?: string | null;
   voteStatus: VoteStatus;
   voteCloseAt: number | null;
-  /** 지금 마감 카운트다운이 '전원 투표' 자동 마감이면 true — 안내 문구를 바꾼다. */
-  voteAuto?: boolean;
   onVote?: (itemId: string) => void;
   onStart?: () => void; // host — '투표 시작'(open)
   onClose?: () => void; // host — '투표 마감'(10초 카운트다운 시작)
@@ -196,14 +193,10 @@ export function VotePlay({
         <ItemEditor items={items} onAdd={onAddItem} onRemove={onRemoveItem} addOnly />
       )}
 
-      {/* 마감 카운트다운 — 전원에게 보인다. 전원 투표로 자동 마감된 경우 문구를 달리한다. */}
+      {/* 마감 카운트다운 — 호스트가 '투표 마감'을 눌렀을 때만 시작되며 전원에게 보인다. */}
       {isClosing && (
         <div className="vote-countdown" role="status" aria-live="polite">
-          {voteAuto ? (
-            <>모든 참여자가 투표했어요! <b>{secondsLeft}</b>초 후 자동으로 마감돼요</>
-          ) : (
-            <>⏱ <b>{secondsLeft}</b>초 후 투표가 마감돼요</>
-          )}
+          ⏱ <b>{secondsLeft}</b>초 후 투표가 마감돼요
         </div>
       )}
 
