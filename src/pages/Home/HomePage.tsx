@@ -50,7 +50,10 @@ export function HomePage() {
   // 호스트가 방을 삭제해 메인으로 튕겨온 참가자에게 알림 모달을 띄운다.
   // 이 신호는 참가자 화면(GameRoomPage)이 navigate state 로만 넘긴다 — 호스트(/host)는 이 경로가
   // 없어 스스로 방을 삭제해도 이 모달이 절대 뜨지 않는다.
-  const roomDeleted = (location.state as { roomDeleted?: boolean } | null)?.roomDeleted ?? false;
+  const navState = location.state as { roomDeleted?: boolean; kicked?: boolean } | null;
+  const roomDeleted = navState?.roomDeleted ?? false;
+  // 강퇴(room:kicked)로 튕겨온 참가자 — '방 삭제'와 구분해 강퇴 전용 문구를 띄운다.
+  const kicked = navState?.kicked ?? false;
 
   const create = useMutation({
     // 게임 종류·방 이름·비밀방 여부는 방 만들기 모달에서 고른다(CreateRoomModal).
@@ -174,8 +177,10 @@ export function HomePage() {
           onCreate={(input) => create.mutate(input)}
         />
       )}
-      {roomDeleted && (
+      {(roomDeleted || kicked) && (
         <RoomClosedModal
+          title={kicked ? '방장에 의해 강퇴되었습니다' : undefined}
+          subtitle={kicked ? '방장이 회원님을 방에서 내보내 메인 화면으로 돌아왔어요.' : undefined}
           onConfirm={() => {
             useRoomStore.getState().reset();
             navigate('/', { replace: true }); // state 를 비워 모달을 닫는다(뒤로가기로 다시 안 뜨게).
