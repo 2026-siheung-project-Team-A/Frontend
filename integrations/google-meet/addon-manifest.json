@@ -1,0 +1,16 @@
+{
+  "addOns": {
+    "common": {
+      "name": "Pick Me Now",
+      "logoUrl": "https://www.pickmenow.co.kr/apple-touch-icon.png"
+    },
+    "meet": {
+      "web": {
+        "sidePanelUrl": "https://www.pickmenow.co.kr/embed",
+        "addOnOrigins": ["https://www.pickmenow.co.kr"],
+        "logoUrl": "https://www.pickmenow.co.kr/apple-touch-icon.png",
+        "darkModeLogoUrl": "https://www.pickmenow.co.kr/apple-touch-icon.png"
+      }
+    }
+  }
+}
