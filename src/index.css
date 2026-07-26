@@ -2050,7 +2050,10 @@ input {
 /* 슬롯 로스터 */
 .lobby-roster {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0,1fr): 1fr 은 기본이 minmax(auto,1fr) 이라 셀 내용(아바타+이름+배지+✕)이
+     트랙보다 넓으면 트랙이 컨테이너 밖으로 밀려 오른쪽 열이 잘린다(줌 등 좁은 패널).
+     최소값을 0 으로 두면 트랙이 내용보다 작아질 수 있어, 이름 말줄임과 함께 2열이 항상 들어맞는다. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
 }
 .lobby-slot {
