@@ -7,6 +7,7 @@ import { useRoomStore } from '../../features/room/store/roomStore';
 import { Screen, Button, GameIcon } from '../../shared/ui';
 import { SoundToggle } from '../../shared/ui/SoundToggle';
 import { initZoomApp } from '../../shared/lib/zoom';
+import { initMeetAddon } from '../../shared/lib/meet';
 import { markEmbedEntry } from '../../shared/lib/embed';
 import type { CreateRoomInput, GameType } from '../../shared/types/api';
 
@@ -36,11 +37,13 @@ export function EmbedPage() {
 
   // 임베드 런처로 진입했음을 세션에 기록한다 — 이후 방을 나갈 때 홈(/)이 아니라
   // 다시 이 런처(/embed)로 돌아오게 하기 위함(Zoom 은 iframe 이 아니라 최상위 웹뷰라 이 플래그로 판별).
-  // 또한 Zoom 클라이언트 안이면 Zoom Apps SDK를 초기화한다(밖이면 무해하게 무시).
-  // config()는 SDK의 첫 호출이어야 하므로 진입 화면인 여기서 마운트 시 한 번 실행한다.
+  // 또한 Zoom/Meet 클라이언트 안이면 각 SDK를 초기화한다(밖이면 무해하게 무시).
+  // 두 SDK 모두 서로 다른 클라이언트에서만 성공하므로 한쪽이 실패해도 다른 쪽·일반 웹앱에 영향 없다.
+  // Zoom config()는 SDK의 첫 호출이어야 하므로 진입 화면인 여기서 마운트 시 한 번 실행한다.
   useEffect(() => {
     markEmbedEntry();
     void initZoomApp();
+    void initMeetAddon();
   }, []);
 
   // 참여 코드로 입장 — 진행자가 아니라 이 기기로 직접 참가할 때. 홈(/)과 같은 규칙으로
