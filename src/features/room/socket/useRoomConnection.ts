@@ -198,6 +198,26 @@ export function useRoomConnection(
       // 로비 복귀를 서버에 알려(room:ready) 다음 게임 시작 게이트(전원 복귀)를 통과시킨다.
       socket.emit('room:ready');
     });
+    // 게임 중 참가자가 튕겨 게임이 중단됨 — 호스트·참가자 전원을 로비로 되돌린다(game:cancelled 와 유사).
+    // 참가자는 status=waiting 으로 로비가 뜨고, 호스트는 로컬 phase 를 바꿔야 해서 lobbyReturn 신호를 올린다.
+    socket.on('game:aborted', (p?: { nickname?: string }) => {
+      const st = useRoomStore.getState();
+      st.setResult(null);
+      st.setTally([]);
+      st.resetLadder();
+      st.resetDraw();
+      st.resetBalloon();
+      st.setRouletteDraft([]);
+      st.setOrderDraft('');
+      st.setVoteState({ status: 'preparing', closeAt: null }); // 투표 게임 중단 시 투표 단계도 초기화
+      st.setCountdownStartAt(null);
+      if (beginTimer) clearTimeout(beginTimer);
+      st.setStatus('waiting');
+      st.bumpLobbyReturn(); // 호스트 화면을 로비로 되돌리는 신호(참가자는 status 로 이미 로비).
+      const who = p?.nickname ? `${p.nickname}님이 나가` : '참가자가 나가';
+      st.pushNotice(`${who} 게임이 중단되어 방으로 돌아왔어요`);
+      if (role === 'participant') socket.emit('room:ready');
+    });
     // 원판 실시간 편집 미리보기 — 저장 없이 참가자에게만 relay 된다(발신자 제외).
     socket.on('roulette:draft', (p: { labels: string[] }) => {
       useRoomStore.getState().setRouletteDraft(p.labels ?? []);
