@@ -96,6 +96,8 @@ interface RoomState {
   missed: boolean;
   /** 호스트(어드민)가 나를 강퇴함(room:kicked). '방 삭제'와 구분해 강퇴 전용 안내를 띄운다. */
   kicked: boolean;
+  /** 게임 중단(game:aborted 등)으로 호스트를 로비로 되돌리라는 신호(증가 카운터). 값이 바뀌면 호스트 화면이 로비로 복귀. */
+  lobbyReturn: number;
 
   // actions
   setRoom: (roomId: string, role: 'host' | 'participant') => void;
@@ -117,6 +119,8 @@ interface RoomState {
   setClosed: (closed: boolean) => void;
   setMissed: (missed: boolean) => void;
   setKicked: (kicked: boolean) => void;
+  /** 게임 중단 → 호스트를 로비로 되돌리는 신호를 올린다(카운터 +1). */
+  bumpLobbyReturn: () => void;
   pushNotice: (text: string) => void;
   clearNotice: () => void;
   applyLadderBuilt: (payload: LadderBuiltPayload) => void;
@@ -177,6 +181,7 @@ const initial = {
   closed: false,
   missed: false,
   kicked: false,
+  lobbyReturn: 0,
 };
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -225,6 +230,7 @@ export const useRoomStore = create<RoomState>((set) => ({
   setClosed: (closed) => set({ closed }),
   setMissed: (missed) => set({ missed }),
   setKicked: (kicked) => set({ kicked }),
+  bumpLobbyReturn: () => set((s) => ({ lobbyReturn: s.lobbyReturn + 1 })),
   // 안내 토스트 띄우기 — 직전 key+1 로 올려 같은 문구가 연달아 와도 애니메이션이 다시 재생된다.
   pushNotice: (text) =>
     set((s) => ({ notice: { text, key: (s.notice?.key ?? 0) + 1 } })),

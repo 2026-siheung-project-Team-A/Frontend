@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { GameResult, GameType } from '../../shared/types/api';
 import { useRoomStore } from '../../features/room/store/roomStore';
@@ -48,6 +48,7 @@ export function HostRoomPage() {
 
   const status = useRoomStore((s) => s.status);
   const setStatus = useRoomStore((s) => s.setStatus);
+  const lobbyReturn = useRoomStore((s) => s.lobbyReturn);
   const storeGameType = useRoomStore((s) => s.gameType);
   const title = useRoomStore((s) => s.title);
   const participants = useRoomStore((s) => s.participants);
@@ -98,6 +99,19 @@ export function HostRoomPage() {
   }, [playAt]);
 
   const [myVote, setMyVote] = useState<string | null>(null); // 호스트 본인 투표(한 표)
+
+  // 게임 중단(참가자 이탈 등)으로 서버가 로비 복귀 신호(lobbyReturn 증가)를 보내면 호스트도 로비로 돌아간다.
+  // status 로 판단하면 게임 시작 카운트다운 종료 시점에 phase/status 전환 순서가 엇갈려 오작동할 수 있어,
+  // 전용 카운터가 바뀔 때만 복귀시킨다(경합 없음).
+  const prevLobbyReturn = useRef(lobbyReturn);
+  useEffect(() => {
+    if (lobbyReturn === prevLobbyReturn.current) return;
+    prevLobbyReturn.current = lobbyReturn;
+    setPlayAt(null);
+    setLocalResult(null);
+    setMyVote(null);
+    setPhase('qr');
+  }, [lobbyReturn]);
 
   const connected = connection === 'connected';
   const wheelItems = storeItems;
