@@ -53,7 +53,7 @@ export function GameLobby({
   me?: string | null; // 내 닉네임(참가자) — 내 슬롯에 '나' 표시
   gameType?: GameType | null; // 현재 선택된 게임 (참가자에게도 실시간 반영)
   onSelectGame?: (gt: GameType) => void; // 호스트: 로비에서 게임 종류 바꾸기
-  onStart?: () => void; // 호스트: 게임 시작
+  onStart?: (force?: boolean) => void; // 호스트: 게임 시작(force=true 면 미복귀 참가자 무시)
   onLeave?: () => void; // 참가자: 나가기(확인 모달 → room:leave)
   onDeleteRoom?: () => void; // 호스트: 방 삭제(확인 모달 → room:close, 전원 퇴장)
   onKick?: (nickname: string) => void; // 호스트: 참가자 강퇴(대기로 멈춘 참가자 등)
@@ -147,7 +147,9 @@ export function GameLobby({
   // 60초 뒤 자동 퇴장해 목록에서 빠진다). 아직 안 돌아온 참가자는 로비에 있는 호스트·참가자에게
   // 'WAITING' 으로 보인다. readyPlayers 가 없으면(초기 등) 전원 준비된 것으로 본다.
   const ready = readyPlayers ?? participants;
-  const pending = participants.filter((p) => !ready.includes(p));
+  // 시작 카운트다운(3·2·1) 중에는 서버가 ready 목록을 이미 비웠다(다음 라운드 복귀를 새로 세려고).
+  // 그 3초 동안 로스터가 전원 'WAITING' 으로 깜빡이지 않게, 카운트다운 중엔 대기자가 없는 것으로 본다.
+  const pending = counting ? [] : participants.filter((p) => !ready.includes(p));
 
   return (
     <Screen
@@ -157,9 +159,17 @@ export function GameLobby({
             <Button variant="secondary" onClick={() => setQrOpen(true)} disabled={counting}>
               QR 보기
             </Button>
-            <Button onClick={onStart} disabled={!gameType || pending.length > 0 || counting}>
-              게임 시작 ▶
-            </Button>
+            {pending.length > 0 ? (
+              // 일부 참가자가 아직 로비로 안 돌아왔음 — 기다리지 않고 '그래도 시작'할 수 있다.
+              // 서버가 그들을 이번 게임에서 빼고 '접속이 늦어 참여 못함' 안내(game:missed)를 보낸다.
+              <Button onClick={() => onStart?.(true)} disabled={!gameType || counting}>
+                그래도 시작 ({pending.length}명 대기)
+              </Button>
+            ) : (
+              <Button onClick={() => onStart?.()} disabled={!gameType || counting}>
+                게임 시작 ▶
+              </Button>
+            )}
           </div>
         ) : (
           <Button variant="secondary" block onClick={() => setConfirmLeave(true)} disabled={counting}>
@@ -243,7 +253,8 @@ export function GameLobby({
             <span className="lobby-name">{nick}</span>
             {me && nick === me ? (
               <span className="lobby-badge me">나</span>
-            ) : ready.includes(nick) ? (
+            ) : ready.includes(nick) || counting ? (
+              // 카운트다운 중엔 곧 모두 게임에 들어가므로 READY 로 본다(WAITING 깜빡임 방지).
               <span className="lobby-badge ready">READY</span>
             ) : (
               // 게임이 끝났는데 아직 방으로 안 돌아온 참가자(60초 자동강퇴 전) — 대기 상태로 표시.

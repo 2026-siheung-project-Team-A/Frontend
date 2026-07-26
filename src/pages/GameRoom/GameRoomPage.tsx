@@ -52,6 +52,7 @@ export function GameRoomPage() {
   const voteAuto = useRoomStore((s) => s.voteAuto);
   const roomError = useRoomStore((s) => s.roomError);
   const closed = useRoomStore((s) => s.closed);
+  const missed = useRoomStore((s) => s.missed);
   const ladder = useRoomStore((s) => s.ladder);
   const ladderTopLabels = useRoomStore((s) => s.ladderTopLabels);
   const ladderBottomLabels = useRoomStore((s) => s.ladderBottomLabels);
@@ -111,6 +112,12 @@ export function GameRoomPage() {
   useEffect(() => {
     if (closed) navigate('/', { state: { roomDeleted: true } });
   }, [closed, navigate]);
+
+  // 호스트가 '그래도 시작'으로 나를 빼고 시작함(game:missed) — 방은 살아 있으므로 삭제 모달 없이
+  // 홈으로 돌려보낸다(안내 토스트는 소켓 핸들러가 이미 띄웠고, 앱 전역 RoomToast 가 홈에서도 보여준다).
+  useEffect(() => {
+    if (missed) navigate('/');
+  }, [missed, navigate]);
 
   // 닉네임중복·정원초과·비밀번호오류·유효기간 시작 전은 별도 에러 페이지로 튕기지 않고 입장 폼으로 되돌린다.
   // 입장 폼(JoinRoomPage)이 navigate state 의 코드를 받아 그 자리에서 인라인으로 알려준다.
@@ -179,8 +186,8 @@ export function GameRoomPage() {
     setMyVote(null);
   };
 
-  // 방 삭제(closed)는 위 useEffect 가 메인으로 보내므로 여기서 렌더할 화면이 없다(리다이렉트 대기).
-  if (closed) return null;
+  // 방 삭제(closed)·게임 놓침(missed)은 위 useEffect 가 메인으로 보내므로 여기서 렌더할 화면이 없다(리다이렉트 대기).
+  if (closed || missed) return null;
 
   // 입장 실패 처리.
   if (roomError) {

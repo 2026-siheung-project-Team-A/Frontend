@@ -36,10 +36,13 @@ export const gameSocket = {
   /**
    * '게임 시작 ▶' — ack 를 기다리는 Promise. 이전 게임 참가자가 다 안 돌아왔으면
    * {ok:false, code:'PLAYERS_NOT_READY'} 로 거절되므로, 호출부가 이 값으로 화면 전환을 막고 안내한다.
+   *
+   * force=true('그래도 시작'): 아직 안 돌아온 참가자를 무시하고 시작한다 — 서버가 그들을 명단에서 빼고
+   * game:missed 안내를 보낸다. 창을 닫은(소켓 끊긴) 유령은 force 와 무관하게 시작 시 항상 정리된다.
    */
-  beginGame: (socket: Socket) =>
+  beginGame: (socket: Socket, force = false) =>
     new Promise<{ ok: boolean; code?: string }>((resolve) => {
-      socket.emit('game:begin', (ack: { ok: boolean; code?: string }) =>
+      socket.emit('game:begin', { force }, (ack: { ok: boolean; code?: string }) =>
         resolve(ack),
       );
     }),

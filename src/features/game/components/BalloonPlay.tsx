@@ -60,7 +60,7 @@ export function BalloonPlay({
   onStart: () => Promise<Ack>;
   onPump: () => Promise<Ack>;
   onPass: () => Promise<Ack>;
-  onTimeout?: (deadline: number) => void; // host 전용 — 턴 60초가 지나면 서버에 만료를 알린다(balloon:timeout)
+  onTimeout?: (deadline: number) => void; // host 전용 — 턴 제한시간이 지나면 서버에 만료를 알린다(balloon:timeout)
   onReturn?: () => void; // '방으로 돌아가기' — 걸린 뒤 로비 복귀(결과 모달이 없어 여기서 제공)
   onLeave: () => void;
 }) {
@@ -86,7 +86,7 @@ export function BalloonPlay({
   const canPump = myTurn && !busy && turnPumps < maxPerTurn;
   const canPass = myTurn && !busy && turnPumps >= 1;
 
-  // ── 턴 제한시간(60초) 카운트다운 ──
+  // ── 턴 제한시간 카운트다운 ── (제한시간은 서버 BALLOON.TURN_MS 가 정한다)
   // 서버가 준 turnDeadline(전원 공유 시각)으로 남은 초를 계산 → 모두 같은 카운트다운을 본다.
   const deadline = balloon?.turnDeadline ?? null;
   const [now, setNow] = useState(() => Date.now());
