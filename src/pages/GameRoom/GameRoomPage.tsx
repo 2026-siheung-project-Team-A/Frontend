@@ -49,7 +49,6 @@ export function GameRoomPage() {
   const tally = useRoomStore((s) => s.tally);
   const voteStatus = useRoomStore((s) => s.voteStatus);
   const voteCloseAt = useRoomStore((s) => s.voteCloseAt);
-  const voteAuto = useRoomStore((s) => s.voteAuto);
   const roomError = useRoomStore((s) => s.roomError);
   const closed = useRoomStore((s) => s.closed);
   const missed = useRoomStore((s) => s.missed);
@@ -284,7 +283,6 @@ export function GameRoomPage() {
           myVote={myVote}
           voteStatus={voteStatus}
           voteCloseAt={voteCloseAt}
-          voteAuto={voteAuto}
           onVote={castVote}
           onLeave={goHome}
         />

@@ -125,7 +125,6 @@ export interface RoomStatePayload {
   // 투표 라이프사이클 — 재접속·늦은 입장이 현재 단계·카운트다운을 복원한다.
   voteStatus: VoteStatus;
   voteCloseAt: number | null;
-  voteAuto?: boolean; // closing 이 '전원 투표' 자동 마감이면 true
 }
 
 /** `room:readyUpdate` — 로비로 돌아온 참가자 목록이 바뀔 때마다(입장·복귀·퇴장). 호스트 UI 가 시작 버튼을 연다. */

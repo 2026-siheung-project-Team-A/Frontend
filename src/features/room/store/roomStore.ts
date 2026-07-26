@@ -55,7 +55,6 @@ interface RoomState {
   tally: VoteTallyEntry[]; // 투표 실시간 집계 (vote:updated)
   voteStatus: VoteStatus; // 투표 라이프사이클(vote:state / room:state) — preparing|open|closing|closed
   voteCloseAt: number | null; // 마감 카운트다운 종료 시각(epoch ms). closing 이 아니면 null.
-  voteAuto: boolean; // 지금 closing 이 '전원 투표' 자동 마감이면 true — 안내 문구 구분용
   onlineCount: number; // 이 방 접속 소켓 수 (online:count / room:state)
 
   // 사다리(네이버 스타일) — ladder:built/revealed/result + room:state 로 복원
@@ -154,7 +153,6 @@ const initial = {
   tally: [] as VoteTallyEntry[],
   voteStatus: 'preparing' as VoteStatus,
   voteCloseAt: null as number | null,
-  voteAuto: false,
   onlineCount: 0,
   ladder: null as LadderStructure | null,
   ladderTopLabels: [] as string[],
@@ -208,7 +206,6 @@ export const useRoomStore = create<RoomState>((set) => ({
       // 투표 단계·카운트다운도 복원(늦은 입장/재접속이 현재 투표 상태를 그대로 본다).
       voteStatus: state.voteStatus ?? 'preparing',
       voteCloseAt: state.voteCloseAt ?? null,
-      voteAuto: state.voteAuto ?? false,
     }),
   setStatus: (status) => set({ status }),
   setGameType: (gameType) => set({ gameType }),
@@ -217,8 +214,8 @@ export const useRoomStore = create<RoomState>((set) => ({
   setReadyPlayers: (readyPlayers) => set({ readyPlayers }),
   setResult: (result) => set({ result }),
   setTally: (tally) => set({ tally }),
-  setVoteState: ({ status, closeAt, auto }) =>
-    set({ voteStatus: status, voteCloseAt: closeAt, voteAuto: auto ?? false }),
+  setVoteState: ({ status, closeAt }) =>
+    set({ voteStatus: status, voteCloseAt: closeAt }),
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setError: (roomError) => set({ roomError }),
   setClosed: (closed) => set({ closed }),
