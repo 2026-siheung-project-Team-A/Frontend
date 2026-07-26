@@ -113,10 +113,11 @@ export function HostRoomPage() {
   // '게임 시작 ▶' — 아직 결과도 항목 편집도 안 끝났지만, game:begin 으로 참가자를
   // 대기 화면에서 실제 게임 화면으로 옮겨 이후 과정(목록 작성·게임 진행)을 실시간으로 보게 한다.
   // 이전 게임 참가자가 다 안 돌아왔으면(PLAYERS_NOT_READY) 서버가 거절 → 로비에 머문다(로비가 안내한다).
-  const beginPlay = async () => {
+  // force=true('그래도 시작') — 아직 로비로 안 돌아온 참가자를 무시하고 시작한다(서버가 그들을 빼고 안내).
+  const beginPlay = async (force = false) => {
     const s = socketRef.current;
     if (connected && s) {
-      const ack = await gameSocket.beginGame(s);
+      const ack = await gameSocket.beginGame(s, force);
       if (ack && ack.ok === false) return; // 전원 복귀 전 — 화면 전환하지 않고 로비 유지
       // 호스트 전환은 브로드캐스트 수신에 의존하지 않는다 — ack 성공 시 직접 카운트다운을 켠다.
       // countdownStartAt: 로비 표시용(참가자와 동기화). playAt: 호스트 화면 전환용(store 와 분리).

@@ -93,6 +93,8 @@ interface RoomState {
   connection: ConnectionStatus;
   roomError: ErrorCode | null;
   closed: boolean;
+  /** 호스트가 '그래도 시작'으로 나를 빼고 게임을 시작함 — 접속이 늦어 이번 게임에 못 낀 상태(game:missed). */
+  missed: boolean;
 
   // actions
   setRoom: (roomId: string, role: 'host' | 'participant') => void;
@@ -112,6 +114,7 @@ interface RoomState {
   setOnlineCount: (onlineCount: number) => void;
   setError: (code: ErrorCode | null) => void;
   setClosed: (closed: boolean) => void;
+  setMissed: (missed: boolean) => void;
   pushNotice: (text: string) => void;
   clearNotice: () => void;
   applyLadderBuilt: (payload: LadderBuiltPayload) => void;
@@ -171,6 +174,7 @@ const initial = {
   connection: 'idle' as ConnectionStatus,
   roomError: null as ErrorCode | null,
   closed: false,
+  missed: false,
 };
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -218,6 +222,7 @@ export const useRoomStore = create<RoomState>((set) => ({
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setError: (roomError) => set({ roomError }),
   setClosed: (closed) => set({ closed }),
+  setMissed: (missed) => set({ missed }),
   // 안내 토스트 띄우기 — 직전 key+1 로 올려 같은 문구가 연달아 와도 애니메이션이 다시 재생된다.
   pushNotice: (text) =>
     set((s) => ({ notice: { text, key: (s.notice?.key ?? 0) + 1 } })),
