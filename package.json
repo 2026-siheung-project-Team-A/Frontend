@@ -15,8 +15,8 @@
     "@zoom/appssdk": "^0.16.40",
     "axios": "^1.18.1",
     "qrcode": "^1.5.4",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1",
     "socket.io-client": "^4.8.3",
     "zustand": "^5.0.14"
