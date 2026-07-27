@@ -59,3 +59,42 @@ export async function copyText(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * 이미지(data URL)를 클립보드에 복사한다 — QR 복사에 쓴다.
+ *
+ * 핵심: data URL 을 `fetch` 없이 **직접 Blob 으로 디코드**한다.
+ *  - `/embed` 페이지는 CSP `connect-src` 에 `data:` 가 없어 `fetch(dataUrl)` 가 막힌다.
+ *    직접 디코드하면 네트워크 요청이 아니라 CSP 와 무관하게 동작한다.
+ * 이미지 클립보드(`ClipboardItem`)를 지원하지 않거나 권한이 거부되면(예: Zoom 웹뷰) false 를 돌려준다.
+ *
+ * 반드시 클릭 등 사용자 제스처 핸들러 안에서 호출할 것.
+ * @returns 복사 성공 여부
+ */
+export async function copyImageDataUrl(dataUrl: string): Promise<boolean> {
+  if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+    return false;
+  }
+  try {
+    const blob = dataUrlToBlob(dataUrl);
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** data URL(`data:image/png;base64,...`)을 fetch 없이 Blob 으로 디코드한다. */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',');
+  const head = dataUrl.slice(0, comma);
+  const body = dataUrl.slice(comma + 1);
+  const mime = head.match(/^data:([^;]+)/i)?.[1] ?? 'image/png';
+  if (!/;base64/i.test(head)) {
+    return new Blob([decodeURIComponent(body)], { type: mime });
+  }
+  const bin = atob(body);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}

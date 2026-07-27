@@ -440,7 +440,8 @@ export function HostRoomPage() {
         onPick={pickDraw}
         onAutoResolve={autoResolveDraw}
         onDraftChange={sendDrawDraft}
-        participantCount={participants.length}
+        // 방 전체 인원(호스트 1명 + 참가자) — 호스트도 제비를 뽑으므로 기본 제비 수를 방 인원과 같게 둔다.
+        participantCount={participants.length + 1}
         onReturn={() => returnToRoom()}
         onLeave={() => setConfirmReturn(true)}
       />
