@@ -3,8 +3,7 @@ import QRCode from 'qrcode';
 import type { GameType } from '../../../shared/types/api';
 import { Screen, Button, TopBar, GameIcon, CrownIcon, CopyIcon } from '../../../shared/ui';
 import { mascotFor } from '../../../shared/lib/mascot';
-import { copyText } from '../../../shared/lib/clipboard';
-import { isEmbedded } from '../../../shared/lib/embed';
+import { copyText, copyImageDataUrl } from '../../../shared/lib/clipboard';
 import { useRoomStore } from '../store/roomStore';
 
 /** 로비에서 바로 고르는 6종 게임 (호스트: 인라인 전환 / 참가자: 현재 게임 표시) */
@@ -123,28 +122,18 @@ export function GameLobby({
     useRoomStore.getState().pushNotice('QR 이미지를 저장했어요');
   };
 
-  // QR 복사 — 가능하면 PNG 이미지를, 아니면 참여 링크(joinUrl)를 복사한다.
-  // 이미지 클립보드(ClipboardItem)는 Zoom 웹뷰 등 임베드 환경에서 대부분 막혀 있으므로,
-  // 임베드거나 미지원이면 이미지 시도를 건너뛰고 곧바로 링크를 복사한다(execCommand 폴백).
+  // QR 복사 — QR '이미지'를 클립보드에 넣는다(모든 환경에서 이미지 우선).
+  // copyImageDataUrl 은 data URL 을 fetch 없이 Blob 으로 디코드해 /embed 의 CSP 에도 막히지 않는다.
+  // 이미지 클립보드를 지원 안 하거나 권한이 거부된 환경(예: Zoom 웹뷰)에서만 참여 링크로 폴백한다.
   const copyQr = async () => {
     if (!qr) return;
     const pushNotice = useRoomStore.getState().pushNotice;
-    const canCopyImage =
-      !isEmbedded() &&
-      typeof ClipboardItem !== 'undefined' &&
-      !!navigator.clipboard?.write;
-    if (canCopyImage) {
-      try {
-        const blob = await (await fetch(qr)).blob();
-        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        pushNotice('QR 이미지를 복사했어요');
-        return;
-      } catch {
-        // 이미지 복사 실패 — 아래 링크 복사로 폴백.
-      }
+    if (await copyImageDataUrl(qr)) {
+      pushNotice('QR 이미지를 복사했어요');
+      return;
     }
     if (joinUrl && (await copyText(joinUrl))) {
-      pushNotice('참여 링크를 복사했어요');
+      pushNotice('QR 이미지를 복사할 수 없어 참여 링크를 복사했어요');
     } else {
       pushNotice('복사에 실패했어요');
     }
